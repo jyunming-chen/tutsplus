@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	canvas {
+		position: fixed;
+		top: 0;
+		left: 0;
+	}
+</style>
+</head>
+
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r69/three.js"></script>
+<!--script src="js/r69/three.min.js"></script-->
+<script src="js/OrbitControls.js"></script>
+<script src="js/KeyboardState.js"></script>
+
+<script>
+
+var clock = new THREE.Clock();
+var scene, renderer, camera;
+var cube;
+var controls, keyboard = new KeyboardState();
+var toytrain;
+var bumpMap;
+var angle = 0;
+var turn = 1;
+
+init();
+animate();
+
+function init()
+{
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0x888888);
+	document.body.appendChild (renderer.domElement);
+
+	scene = new THREE.Scene();
+
+	camera = new THREE.PerspectiveCamera (45, width/height, 0.1, 10000);
+	camera.position.y = 48;
+	camera.position.z = 120;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	// add control here (after the camera is defined)
+	controls = new THREE.OrbitControls (camera, renderer.domElement);
+
+	var gridXZ = new THREE.GridHelper(100, 10);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0xffffff) );
+	scene.add(gridXZ);
+
+	var pointLight = new THREE.PointLight (0xffffff);
+	pointLight.position.set (0,300,200);
+	scene.add (pointLight);
+
+	// load the clara.io toytrain
+	bumpMap = THREE.ImageUtils.loadTexture("images/wood_oak_002_bump.jpg");
+	var loader = new THREE.ObjectLoader();
+	loader.load("models/toy-train.json",function ( obj ) {
+		obj.traverse (function (mesh)
+			{
+				if (mesh instanceof THREE.Mesh) {
+					mesh.material.bumpMap = bumpMap;
+					mesh.material.bumpScale = 0.2;
+				}
+			});
+		
+		obj.scale.set (10,10,10);
+		scene.add( obj );
+	});
+
+	var ambientLight = new THREE.AmbientLight (0x111111);
+	scene.add(ambientLight);
+}
+
+function animate()
+{
+	var dt = clock.getDelta();
+
+	if (toytrain != undefined && turn) { 
+		toytrain.position.set (50*Math.cos(angle),0,- 50*Math.sin(angle));
+		toytrain.rotation.y = angle + Math.PI;
+		angle += dt;
+	}
+	
+	requestAnimationFrame ( animate ); 
+	update();
+	render();  
+}
+
+function update()
+{
+	controls.update();
+	keyboard.update();         
+	if ( keyboard.down("Z") )  
+		turn ^= 1;               
+}
+
+function render()
+{
+	renderer.render (scene, camera);
+}
+
+
+</script>
+</body>
+
+</html>

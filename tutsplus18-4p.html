@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #ffff00
+	}
+	a {color: #00ffff}
+	strong {color:red}
+	
+</style>
+</head>
+
+<body> 
+
+<div id="info">
+    webgl tutorial 18-4p <br/>
+	Sleeping Giant (IK) <br/><br/>
+	( Controlled by DAT.GUI ) 
+</div>
+
+
+<script src="js/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/dat.gui.min.js"></script>
+
+<script src="ik_system.js"></script>
+<script src="ccd_box.js"></script>
+ 
+<script>
+
+var scene, renderer, camera;
+var controls;
+var arm, arm2;
+
+var gcontrols;
+var theta1 = 0, theta2 = 0, theta3 = 0;
+var boxMaterial, boxMaterial2;
+var clock = new THREE.Clock();
+var tsphere;
+
+init();
+animate();
+
+function init()
+{
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+	
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0x888888);
+	
+	document.body.appendChild (renderer.domElement);
+
+	scene = new THREE.Scene();
+
+	camera = new THREE.PerspectiveCamera (40, width/height, 0.1, 10000);
+	camera.position.y = 160;
+	camera.position.z = 400;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	controls = new THREE.OrbitControls (camera, renderer.domElement);
+
+	var boxGeometry = new THREE.BoxGeometry (100, 50, 30);
+	boxMaterial = new THREE.MeshLambertMaterial ({color: 0x00ffff, wireframe:false});
+	body = new THREE.Mesh (boxGeometry, boxMaterial);
+	body.position.set (45,-30,0);
+	scene.add (body);
+
+	var boxGeometry = new THREE.BoxGeometry (40, 10,10);
+	boxMaterial = new THREE.MeshLambertMaterial ({color: 0x00ffff, wireframe:false});
+	arm = new THREE.Mesh (boxGeometry, boxMaterial);
+	scene.add (arm);
+
+	tsphere = new THREE.Mesh (new THREE.SphereGeometry(3), new THREE.MeshBasicMaterial());
+	scene.add (tsphere);
+	
+	boxGeometry = new THREE.BoxGeometry (60, 10,10);
+	boxMaterial2 = new THREE.MeshLambertMaterial ({color: 0xff00ff, wireframe:false});
+	arm2 = new THREE.Mesh (boxGeometry, boxMaterial2);
+	arm.add (arm2);
+
+	var gridXZ = new THREE.GridHelper(100, 10);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0xffffff) );
+	scene.add(gridXZ);
+
+	var pointLight = new THREE.PointLight (0xffffff);
+	pointLight.position.set (0,300,200);
+	scene.add (pointLight);
+
+	var ambientLight = new THREE.AmbientLight (0x111111);
+	scene.add(ambientLight);
+
+	gcontrols = new function() {
+		this.theta1 = 0.01;
+		this.theta2 = 0.01;
+		this.theta3 = -0.01;
+		this.wireshow = false;
+	}
+		
+	var gui = new dat.GUI();
+	gui.add (gcontrols, 'theta1', 0,3);
+	gui.add (gcontrols, 'theta2', -1.5, 1.5);
+	gui.add (gcontrols, 'theta3', -3, 0);
+	gui.add (gcontrols, 'wireshow');
+	
+	window.addEventListener ('resize', onWindowResize, false);	
+
+	setarm();
+	
+}
+
+
+function animate()
+{
+	requestAnimationFrame ( animate );  
+	update();
+	render(); 
+}
+
+function update()
+{
+	controls.update();
+	var dt = clock.getElapsedTime();
+	// have not yet found a way to back-control the sliders ...
+	// display style (floating poitn)... solved
+
+	theta1 = gcontrols.theta1;
+	theta2 = gcontrols.theta2;
+	theta3 = gcontrols.theta3;
+	boxMaterial.wireframe = gcontrols.wireshow;
+	boxMaterial2.wireframe = gcontrols.wireshow;
+	
+	var r = 5;
+	var target = new THREE.Vector3 (70+r*Math.cos(dt),20+r*Math.sin(dt),20);
+//console.log (target);
+//	var target = new THREE.Vector3 (70,20,20);
+	tsphere.position.copy (target);
+	
+//	var theta = [theta1, theta2, theta3];
+	var theta = [0,0,-1e-2];
+	ik_ccd (target, theta);
+	theta1 = theta[0]; 
+	theta2 = theta[1]; 
+	theta3 = theta[2]; 
+	console.log(theta);
+}
+
+function onWindowResize()
+{
+	var width= window.innerWidth, height = window.innerHeight;
+	camera.aspect = width / height;
+	camera.updateProjectionMatrix();
+	renderer.setSize (width, height);
+}
+
+
+function render()
+{
+	arm.rotation.z = theta1;
+	arm.rotation.y = theta2;
+	arm.rotation.order = 'ZYX';
+	
+	arm.position.set (20*Math.cos(theta1)*Math.cos(theta2), 
+					20*Math.sin(theta1)*Math.cos(theta2),
+					-20*Math.sin(theta2));
+	
+	arm2.rotation.y = theta3;
+	arm2.position.set (20+30*Math.cos(theta3), 0, -30*Math.sin(theta3));
+	
+	renderer.render (scene, camera);
+}
+</script>
+</body>
+
+</html>

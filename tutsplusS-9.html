@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<style>
+			body {
+				background-color: #fff;
+				color: #111;
+				margin: 0px;
+				overflow: hidden;
+				font-family: Monospace;
+				font-size: 20px;
+			}
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				
+				padding: 5px;
+				text-align: center;
+				color: #ffff00
+			}
+			a {color: #00ffff}
+
+		</style>
+	</head>
+	<body>
+		<script src="http://mrdoob.github.com/three.js/build/three.min.js"></script>
+		<script src="js/OrbitControls.js"></script>
+		
+		<script src="http://mrdoob.github.com/three.js/examples/js/shaders/CopyShader.js"></script>
+		<script src="http://mrdoob.github.com/three.js/examples/js/shaders/SSAOShader.js"></script>
+		
+		<script src="http://mrdoob.github.com/three.js/examples/js/postprocessing/EffectComposer.js"></script>
+		<script src="http://mrdoob.github.com/three.js/examples/js/postprocessing/RenderPass.js"></script>
+		<script src="http://mrdoob.github.com/three.js/examples/js/postprocessing/MaskPass.js"></script>
+		<script src="http://mrdoob.github.com/three.js/examples/js/postprocessing/ShaderPass.js"></script>
+		
+		<div id="info">
+			webgl tutorial S-9 <br/>
+			Post-Processing Shader  <br/><br/>
+			SSAO Shader
+		</div>		
+		<script>
+
+			// workaround for chrome bug: http://code.google.com/p/chromium/issues/detail?id=35980#c12
+			if ( window.innerWidth === 0 ) { window.innerWidth = parent.innerWidth; window.innerHeight = parent.innerHeight; }
+							
+			var camera, scene, renderer;
+			var group;
+			var depthMaterial, depthTarget, composer;
+			var controls;
+			
+			init();
+			animate();
+
+			function init() {
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+				
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 10, 1000 );
+				camera.position.z = 500;
+
+				scene = new THREE.Scene();
+				
+				controls = new THREE.OrbitControls (camera);
+				
+				group = new THREE.Object3D();
+				scene.add( group );
+				
+				var geometry = new THREE.CubeGeometry( 10, 10, 10 );
+				var material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+
+				for ( var i = 0; i < 100; i ++ ) {
+				
+					var mesh = new THREE.Mesh( geometry, material );
+					mesh.position.x = Math.random() * 400 - 200;
+					mesh.position.y = Math.random() * 400 - 200;
+					mesh.position.z = Math.random() * 400 - 200;
+					mesh.rotation.x = Math.random();
+					mesh.rotation.y = Math.random();
+					mesh.rotation.z = Math.random();
+					mesh.scale.x = mesh.scale.y = mesh.scale.z = Math.random() * 10 + 1;
+					group.add( mesh );
+					
+				}
+				
+				// depth
+				var depthShader = THREE.ShaderLib[ "depthRGBA" ]; // Depth encoding into RGBA texture
+				var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
+
+				depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, 
+									vertexShader: depthShader.vertexShader, uniforms: depthUniforms } );
+				depthMaterial.blending = THREE.NoBlending;
+
+				depthTarget = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight, 
+							{ minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
+
+				// postprocessing
+				
+				composer = new THREE.EffectComposer( renderer );
+				composer.addPass( new THREE.RenderPass( scene, camera ) );
+				
+				var effect = new THREE.ShaderPass( THREE.SSAOShader );
+				effect.uniforms[ 'tDepth' ].value = depthTarget;
+				effect.uniforms[ 'size' ].value.set( window.innerWidth, window.innerHeight );
+				effect.uniforms[ 'cameraNear' ].value = camera.near;
+				effect.uniforms[ 'cameraFar' ].value = camera.far;
+				effect.renderToScreen = true;
+				composer.addPass( effect );
+				
+				// resize will create artifact!!
+				window.addEventListener ( 'resize', onWindowResize, false);
+			}
+			
+			function onWindowResize() {
+ 
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+			
+			function animate() {
+
+				requestAnimationFrame( animate );
+				
+				controls.update();
+				//var timer = performance.now();
+				
+				//group.rotation.x = timer * 0.0002;
+				//group.rotation.y = timer * 0.0001;
+				
+				scene.overrideMaterial = depthMaterial;
+				renderer.render( scene, camera, depthTarget );
+
+				scene.overrideMaterial = null;
+				composer.render();
+				
+			}
+
+		</script>
+	</body>
+</html>

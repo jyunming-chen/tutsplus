@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+ <head> 
+  <title>MD2 Animation</title> 
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #ffff00
+	}
+	a {color: #00ffff}
+	strong {color:red}
+</style>
+</head> 
+
+ <body> 
+<div id="info">
+    webgl tutorial 27-1 <br/><br/>
+	MD2 Animation <br/><br/>
+	Press J to jump
+</div>
+
+<div id="WebGL-output"> 
+</div> 
+
+<script src="js/r69/three.js"></script> 
+<script src="js/OrbitControls.js"></script>
+<script src="js/KeyboardState.js"></script>
+
+<script>
+
+var scene, renderer, camera, mesh;
+var clock = new THREE.Clock();
+var orbitcontrols;
+var keyboard = new KeyboardState();
+
+init();
+render();
+
+function init () 
+{
+	scene = new THREE.Scene();
+
+	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+	renderer = new THREE.WebGLRenderer();
+	renderer.setClearColor(new THREE.Color(0x888888, 1.0));
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.shadowMapEnabled = true;
+	document.body.appendChild (renderer.domElement);
+
+	// position and point the camera to the center of the scene
+	camera.position.x = -50;
+	camera.position.y = 40;
+	camera.position.z = 160;
+	camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+	orbitcontrols = new THREE.OrbitControls(camera, renderer.domElement);
+
+	// add spotlight for the shadows
+	var spotLight = new THREE.SpotLight(0xffffff);
+	spotLight.position.set(-50, 70, 60);
+	spotLight.intensity = 1;
+	scene.add(spotLight);
+
+	var gridXZ = new THREE.GridHelper(150, 10);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0xffffff) );
+	scene.add(gridXZ);
+
+	var loader = new THREE.JSONLoader();
+	loader.load('models/laalaa.js', function (geometry, mat) {
+		geometry.computeMorphNormals();
+
+		var mat = new THREE.MeshBasicMaterial(
+				{
+					map: THREE.ImageUtils.loadTexture("models/laalaa.png"),
+					morphTargets: true, morphNormals: true
+				});
+
+		mesh = new THREE.MorphAnimMesh(geometry, mat);
+		mesh.parseAnimations();
+
+		mesh.playAnimation('run', 10);
+
+		scene.add(mesh);
+	});
+
+	window.addEventListener ('resize', onWindowResize, false);	
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+var angle=0;
+var inJump = false, startJump = false;
+
+function render() 
+{
+	var delta = clock.getDelta();  // in seconds
+	orbitcontrols.update();
+	keyboard.update();
+	
+	if ( keyboard.down("J") && !inJump) { // yes, must use UPPER CASE
+		startJump = true;
+	}
+	
+	angle += 0.01;
+	
+	if (mesh != undefined) {
+		mesh.position.x = 130*Math.cos(angle);
+		mesh.position.z = - 130*Math.sin(angle);
+		mesh.position.y = 25;
+		mesh.rotation.y = -Math.PI/2 + angle;
+
+		if (startJump) {
+			mesh.playAnimation('jump', 2);  // slow motion jump
+			// console.log (mesh.startKeyframe, " ", mesh.endKeyframe);
+			inJump = true;
+			startJump = false;
+		}
+
+		if (inJump && mesh.currentKeyframe == mesh.endKeyframe) { // end of jump
+			mesh.playAnimation ('run', 10);						  // switch to run
+			inJump = false;
+		}
+
+		// console.log (mesh.currentKeyframe);
+		
+		mesh.updateAnimation(delta * 1000);   // in msecs
+	}
+
+	requestAnimationFrame(render);
+	renderer.render(scene, camera);
+}
+
+</script>  
+ </body>
+</html>

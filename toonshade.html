@@ -1,0 +1,315 @@
+
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<title>three.js webgl - toon shading</title>
+<meta charset="utf-8">
+<style>body{color:#fff;font-family:Monospace;font-size:13px;text-align:center;background-color:#000;margin:0px;overflow:hidden;}#info{color:#ffffff;position:absolute;top:0px;width:100%;padding:5px;}a{color:gold;}#oldie{font-family:monospace;font-size:13px;text-align:center;background:rgb(0,0,50);color:#fff;padding:1em;width:475px;margin:5em auto 0;display:none;}</style>
+</head>
+<body>
+<div id="info">
+<a href="http://threejs.org" target="_blank">three.js</a> - toon shading
+</div>
+<script src="js/three.min.js"></script>
+<script src="js/TrackballControls.js"></script>
+<script src='js/Detector.js'></script>
+<script src="js/dat.gui.min.js"></script>
+<script>
+
+			/*global THREE, requestAnimationFrame, Detector, dat */
+			THREE.ShaderTypes = {
+
+			'phongDiffuse' : {
+
+				uniforms: {
+
+					"uDirLightPos":	{ type: "v3", value: new THREE.Vector3() },
+					"uDirLightColor": { type: "c", value: new THREE.Color( 0xffffff ) },
+
+					"uMaterialColor":  { type: "c", value: new THREE.Color( 0xffffff ) },
+
+					uKd: {
+						type: "f",
+						value: 0.7
+					},
+					uBorder: {
+						type: "f",
+						value: 0.4
+					}
+				},
+
+				vertexShader: [
+
+					"varying vec3 vNormal;",
+					"varying vec3 vViewPosition;",
+
+					"void main() {",
+
+						"gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+						"vNormal = normalize( normalMatrix * normal );",
+						"vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );",
+						"vViewPosition = -mvPosition.xyz;",
+
+					"}"
+
+				].join("\n"),
+
+				fragmentShader: [
+
+					"uniform vec3 uMaterialColor;",
+
+					"uniform vec3 uDirLightPos;",
+					"uniform vec3 uDirLightColor;",
+
+					"uniform float uKd;",
+					"uniform float uBorder;",
+
+					"varying vec3 vNormal;",
+					"varying vec3 vViewPosition;",
+
+					"void main() {",
+
+						// compute direction to light
+						"vec4 lDirection = viewMatrix * vec4( uDirLightPos, 0.0 );",
+						"vec3 lVector = normalize( lDirection.xyz );",
+
+						// diffuse: N * L. Normal must be normalized, since it's interpolated.
+						"vec3 normal = normalize( vNormal );",
+						//was: "float diffuse = max( dot( normal, lVector ), 0.0);",
+						// solution
+						"float diffuse = dot( normal, lVector );",
+						"if ( diffuse > uBorder ) { diffuse = 1.0; }",
+						"else { diffuse = 0.5; }",
+
+						"gl_FragColor = vec4( uKd * uMaterialColor * uDirLightColor * diffuse, 1.0 );",
+
+					"}"
+
+				].join("\n")
+
+			}
+
+			};
+
+			if (!Detector.webgl) { Detector.addGetWebGLMessage(); }
+
+			var SCREEN_WIDTH = window.innerWidth;
+			var SCREEN_HEIGHT = window.innerHeight;
+
+			var container, camera, scene, renderer;
+
+			var cameraControls;
+
+			var effectController;
+
+			var clock = new THREE.Clock();
+
+			var teapotSize = 400;
+
+			var ambientLight, light;
+			var teapot;
+			var phongMaterial;
+
+			init();
+			animate();
+
+			function init() {
+
+				container = document.createElement('div');
+				document.body.appendChild(container);
+
+				// CAMERA
+
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 80000);
+				camera.position.set(-600, 900, 1300);
+
+				// SCENE
+
+				scene = new THREE.Scene();
+
+				scene.add(camera);
+
+				// LIGHTS
+
+				ambientLight = new THREE.AmbientLight(0x333333); // 0.2
+				scene.add(ambientLight);
+
+				light = new THREE.DirectionalLight(0xffffff, 1.0);
+				light.position.set(320, 390, 700);
+
+				scene.add(light);
+
+				// RENDERER
+
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+				renderer.setClearColor(0xAAAAAA, 1.0);
+
+				container.appendChild(renderer.domElement);
+
+				renderer.gammaInput = true;
+				renderer.gammaOutput = true;
+
+				// EVENTS
+
+				window.addEventListener('resize', onWindowResize, false);
+
+				// CONTROLS
+
+				cameraControls = new THREE.TrackballControls(camera, renderer.domElement);
+				cameraControls.target.set(0, 0, 0);
+
+				// MATERIALS
+				var materialColor = new THREE.Color();
+				materialColor.setRGB(1.0, 0.8, 0.6);
+
+				phongMaterial = createShaderMaterial("phongDiffuse", light);
+				phongMaterial.uniforms.uMaterialColor.value.copy(materialColor);
+				phongMaterial.side = THREE.DoubleSide;
+
+	var jsonLoader = new THREE.JSONLoader();
+	jsonLoader.load ("models/teapot.js", addModelToScene);
+
+				// GUI
+
+				setupGui();
+			}
+function addModelToScene ( geometry, materials )
+{
+	var material = new THREE.MeshFaceMaterial (materials);
+	android = new THREE.Mesh (geometry, material);
+	android.scale.set (12,12,12);
+	android.position.set (50,0,0);
+	scene.add (android);
+}
+
+			function createShaderMaterial(id, light) {
+
+				var shader = THREE.ShaderTypes[id];
+
+				var u = THREE.UniformsUtils.clone(shader.uniforms);
+
+				var vs = shader.vertexShader;
+				var fs = shader.fragmentShader;
+
+				var material = new THREE.ShaderMaterial({ uniforms: u, vertexShader: vs, fragmentShader: fs });
+
+				material.uniforms.uDirLightPos.value = light.position;
+				material.uniforms.uDirLightColor.value = light.color;
+
+				return material;
+
+			}
+
+			// EVENT HANDLERS
+
+			function onWindowResize() {
+
+				SCREEN_WIDTH = window.innerWidth;
+				SCREEN_HEIGHT = window.innerHeight;
+
+				renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+
+				camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+				camera.updateProjectionMatrix();
+
+			}
+
+			function setupGui() {
+
+				effectController = {
+
+					kd: 0.7,
+					border: 0.4,
+
+					hue: 0.09,
+					saturation: 0.46,
+					value: 1.0,
+
+					lhue: 0.04,
+					lsaturation: 0.0,
+					lvalue: 1.0,
+
+					// bizarrely, if you initialize these with negative numbers, the sliders
+					// will not show any decimal places.
+					lx: 0.32,
+					ly: 0.39,
+					lz: 0.7,
+
+					dummy: function () {
+					}
+
+				};
+
+				var h;
+
+				var gui = new dat.GUI();
+
+				// material (attributes)
+
+				h = gui.addFolder("Material control");
+
+				h.add(effectController, "kd", 0.0, 1.0, 0.025).name("m_kd");
+				h.add(effectController, "border", -1.0, 1.0, 0.025).name("m_border");
+
+				// material (color)
+
+				h = gui.addFolder("Material color");
+
+				h.add(effectController, "hue", 0.0, 1.0, 0.025).name("m_hue");
+				h.add(effectController, "saturation", 0.0, 1.0, 0.025).name("m_saturation");
+				h.add(effectController, "value", 0.0, 1.0, 0.025).name("m_value");
+
+				// light (point)
+
+				h = gui.addFolder("Light color");
+
+				h.add(effectController, "lhue", 0.0, 1.0, 0.025).name("hue");
+				h.add(effectController, "lsaturation", 0.0, 1.0, 0.025).name("saturation");
+				h.add(effectController, "lvalue", 0.0, 1.0, 0.025).name("value");
+
+				// light (directional)
+
+				h = gui.addFolder("Light direction");
+
+				h.add(effectController, "lx", -1.0, 1.0, 0.025).name("x");
+				h.add(effectController, "ly", -1.0, 1.0, 0.025).name("y");
+				h.add(effectController, "lz", -1.0, 1.0, 0.025).name("z");
+
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame(animate);
+				render();
+
+			}
+
+			function render() {
+
+				var delta = clock.getDelta();
+
+				cameraControls.update(delta);
+
+				// take inputs from sliders and modify shader's values
+				phongMaterial.uniforms.uKd.value = effectController.kd;
+				phongMaterial.uniforms.uBorder.value = effectController.border;
+
+				var materialColor = new THREE.Color();
+				materialColor.setHSV(effectController.hue, effectController.saturation, effectController.value);
+				phongMaterial.uniforms.uMaterialColor.value.copy(materialColor);
+
+				light.position.set(effectController.lx, effectController.ly, effectController.lz);
+				light.position.normalize();
+
+				light.color.setHSV(effectController.lhue, effectController.lsaturation, effectController.lvalue);
+
+				renderer.render(scene, camera);
+
+			}
+
+		</script>
+</body>
+</html>

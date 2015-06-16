@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #ffff00
+	}
+	a {color: #00ffff}
+	strong {color:red}
+</style>
+</head>
+
+<body> 
+
+<div id="container"></div>
+<div id="info">
+    webgl tutorial 19-0 <br/><br/>
+	Picking
+	<br/><br/>
+</div>
+
+
+<script src="js/r69/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+
+<script>
+////////////////////////////////////////////////////
+// global var's
+var scene, renderer, camera;
+var controls;
+
+var raycaster;
+var mouse = new THREE.Vector2();
+
+var left_box, right_box;
+var angle_l = 0, angle_r = 0;
+var spin_l = false, spin_r = false;
+
+init();
+animate();
+
+function spin (which) 
+{
+	if (which == "left") {
+		spin_l = true;
+	}
+	else {
+		spin_r = true;
+	}
+}
+
+function init()
+{
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0x888888);
+	document.body.appendChild (renderer.domElement);
+
+	scene = new THREE.Scene();
+
+	// picking problem comes from far/near ratio too big (was 0.1, 100000000)
+	camera = new THREE.PerspectiveCamera (45, width/height, 1, 10000);
+	camera.position.x = 0;
+	camera.position.y = 160;
+	camera.position.z = 400;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	var left_box_geom = new THREE.BoxGeometry (20,20,20);
+	var left_box_mat = new THREE.MeshLambertMaterial ({color: 0xff2211});
+	left_box = new THREE.Mesh (left_box_geom, left_box_mat);
+	left_box.position.set (-50,10,0);
+	left_box.name = "leftB";
+	scene.add (left_box);
+		
+	var right_box_geom = new THREE.BoxGeometry (20,20,20);
+	var right_box_mat = new THREE.MeshLambertMaterial ({color: 0x22ff11});
+	right_box = new THREE.Mesh (right_box_geom, right_box_mat);
+	right_box.position.set (50,10,0);
+	right_box.name = "rightB";
+	scene.add (right_box);
+
+	// add control here (after the camera is defined)
+	controls = new THREE.OrbitControls (camera, render.domElement);
+
+	var gridXZ = new THREE.GridHelper(100, 10);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0xffffff) );
+	scene.add(gridXZ);
+
+	var pointLight = new THREE.PointLight (0xffffff);
+	pointLight.position.set (0,300,200);
+	scene.add (pointLight);
+
+	var ambientLight = new THREE.AmbientLight (0x111111);
+	scene.add(ambientLight);
+	
+	window.addEventListener ('resize', onWindowResize, false);	
+
+	raycaster = new THREE.Raycaster();
+	document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+}
+
+function onDocumentMouseDown( event ) {
+
+	// PICKING DETAILS: 
+	// convert mouse.xy = [-1,1]^2 (NDC)
+	// unproject (mouse.xy, 1) to a point on the far plane (in world coordinate)
+	// set raycaster (origin, direction)
+	// find intersection objects, (closest first) 
+	// each record as
+	// [ { distance, point, face, faceIndex, object }, ... ]
+
+	event.preventDefault();
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+	// find intersections
+	var vector = new THREE.Vector3( mouse.x, mouse.y, 1 ).unproject( camera );
+	raycaster.set( camera.position, vector.sub( camera.position ).normalize() );
+	var intersects = raycaster.intersectObjects( scene.children );
+	if ( intersects.length > 0 ) {
+		if (intersects[0].object.name === "leftB") spin ("left");
+		else if (intersects[0].object.name === "rightB") spin ("right");
+	}
+	
+}
+
+function animate()
+{
+	if (spin_l) {
+		angle_l += 0.1;
+		if (angle_l > Math.PI) {
+			angle_l = 0.0;
+			spin_l = false;
+		}
+	}
+	if (spin_r) {
+		angle_r += 0.1;
+		if (angle_r > Math.PI) {
+			angle_r = 0.0;
+			spin_r = false;
+		}
+	}
+	
+	left_box.rotation.y = angle_l;
+	right_box.rotation.y = angle_r;
+
+	requestAnimationFrame ( animate );  // timer callback
+	update();
+	render();  // display callback
+}
+
+function update()
+{
+	controls.update();
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+function render()
+{
+	renderer.render (scene, camera);
+}
+</script>
+</body>
+
+</html>

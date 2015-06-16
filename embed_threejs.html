@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="author" content="Sylvain Lagrue">
+		<title>My WebGL/three.js examples</title>
+	</head>
+
+	<style>
+	#stopBtn {
+		position: absolute;
+		top: 70px;
+		left: 280px;
+	}
+	#frame0 {
+		position: absolute;
+		top: 100px;
+		left: 10px;
+	}
+	</style>
+	<body>
+		<script>
+		function buttonCall()
+		{
+			document.getElementById ("frame0").contentWindow.toggleTurn();
+		}
+		</script>
+
+		<h1> My WebGL/three.js examples <br/></h1>
+		
+		<button id="stopBtn" onclick="buttonCall()">STOP</button>
+		
+		<div class="example">
+			<iframe id="frame0" align="middle" height="600" width="600" src="tutsplus2.html">Sorry, your browser does not accept <em>iframe</em> tag</iframe>
+			<p style="text-align:left"><a href="tutsplus2.html">Launch in full window</a><p>
+		</div>
+		
+		
+	</body>
+</html>

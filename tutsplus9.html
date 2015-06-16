@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>Lines and Dashes (Three.js)</title>
+	<meta charset="utf-8">
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #008888
+	}
+</style>	
+	
+</head>
+<body>
+
+<script src="js/r69/three.min.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/OrbitControls.js"></script>
+<div id="info">
+webgl tutorial 9<br/><br/>
+Line Style <br/>
+(linewidth does not work on Windows)
+</div>
+
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+<script>
+/*
+	Three.js "tutorials by example"
+	Author: Lee Stemkoski
+	Date: July 2013 (three.js v59dev)
+ */
+
+var container, scene, camera, renderer, controls;
+var cube;
+
+init();
+animate();
+
+function init() 
+{
+	scene = new THREE.Scene();
+
+	var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+	camera.position.set(0,150,400);
+	camera.lookAt(scene.position);	
+	//scene.add(camera);
+
+	if ( Detector.webgl )
+		renderer = new THREE.WebGLRenderer( {antialias:true} );
+	else
+		renderer = new THREE.CanvasRenderer(); 
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	renderer.setClearColor (0xffffff);
+	
+	document.body.appendChild (renderer.domElement);
+
+	// CONTROLS
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+	// LIGHT
+	var light = new THREE.PointLight(0xffffff);
+	light.position.set(0,250,0);
+	scene.add(light);
+	
+	var lineGeometry = new THREE.Geometry();
+	var vertArray = lineGeometry.vertices;
+	vertArray.push( new THREE.Vector3(-150, -100, 0), new THREE.Vector3(-150, 100, 0) );
+	lineGeometry.computeLineDistances();
+	// use LineBasicMaterial if no dashes are desired
+	var lineMaterial = new THREE.LineBasicMaterial( { color: 0xcc0000 } );
+	var line = new THREE.Line( lineGeometry, lineMaterial );
+	scene.add(line);
+
+	var lineGeometry = new THREE.Geometry();
+	var vertArray = lineGeometry.vertices;
+	vertArray.push( new THREE.Vector3(-100, -100, 0), new THREE.Vector3(-100, 100, 0), new THREE.Vector3 (50,100,0) );
+	lineGeometry.computeLineDistances();
+	var lineMaterial = new THREE.LineDashedMaterial( { color: 0x00cc00, dashSize: 4, gapSize: 2 } );
+	var line = new THREE.Line( lineGeometry, lineMaterial );
+	scene.add(line);
+
+	var cubeGeometry = new THREE.BoxGeometry( 50, 50, 50 );
+	var dashMaterial = new THREE.LineDashedMaterial( { color: 0x000000, dashSize: 2, gapSize: 3 } );
+	cube = new THREE.Line( geo2line(cubeGeometry), dashMaterial, THREE.LinePieces );
+	cube.position.set(50,26,0);
+	scene.add(cube);
+
+	window.addEventListener ('resize', onWindowResize, false);		
+}
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+function animate() 
+{
+    requestAnimationFrame( animate );
+	render();		
+	controls.update();
+}
+
+function render() 
+{
+	renderer.render( scene, camera );
+}
+
+function geo2line( geo ) // credit to WestLangley!
+{
+    var geometry = new THREE.Geometry();
+    var vertices = geometry.vertices;
+	
+	for ( i = 0; i < geo.faces.length; i++ ) 
+	{
+        var face = geo.faces[ i ];
+        if ( face instanceof THREE.Face3 ) 
+		{
+            var a = geo.vertices[ face.a ].clone();
+			var b = geo.vertices[ face.b ].clone();
+			var c = geo.vertices[ face.c ].clone();
+            vertices.push( a,b, b,c, c,a );
+        } 
+		else if ( face instanceof THREE.Face4 ) 
+		{
+			var a = geo.vertices[ face.a ].clone();
+			var b = geo.vertices[ face.b ].clone();
+			var c = geo.vertices[ face.c ].clone();
+			var d = geo.vertices[ face.d ].clone();
+            vertices.push( a,b, b,c, c,d, d,a );
+        }
+    }
+
+    geometry.computeLineDistances();
+    return geometry;
+}
+</script>
+
+</body>
+</html>

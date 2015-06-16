@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #ffff00
+	}
+	a {color: #00ffff}
+	strong {color:red}
+	
+	#container{
+	    z-index: 0; left:0px; top:0px;
+	    overflow: hidden;
+	    position: absolute;
+
+	    width: 100%;
+	    height: 100%;
+    }	
+</style>
+</head>
+
+<body> 
+
+<div id="container"></div>
+<div id="info">
+    webgl tutorial 18-3 <br/>
+	IK of Two-Link Arm  <br/><br/>
+	( ad hoc CCD Solver )
+</div>
+
+
+<script src="js/r69/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+
+<script src="js/dat.gui.min.js"></script>
+<script src="ccd_box-0.js"></script>
+ 
+<script>
+var scene, renderer, camera;
+var controls;
+var arm, arm2;
+
+var theta1 = 0, theta2 = 0;
+var boxMaterial, boxMaterial2;
+var container;
+var clock = new THREE.Clock();
+
+var mouse = new THREE.Vector2();
+
+var end;
+var target = new THREE.Vector3();
+
+init();
+animate();
+
+function init()
+{
+	container = document.getElementById ("container");
+	var width = container.clientWidth;
+	var height = container.clientHeight;
+
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0x888888);
+
+	scene = new THREE.Scene();
+
+	camera = new THREE.PerspectiveCamera (45, width/height, 1, 10000);
+	camera.position.y = 160;
+	camera.position.z = 400;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	container.appendChild (renderer.domElement); 
+	controls = new THREE.OrbitControls (camera, renderer.domElement);
+
+	var boxGeometry = new THREE.BoxGeometry (60, 10,10);
+	boxMaterial = new THREE.MeshLambertMaterial ({color: 0x00ffff, wireframe:false});
+	arm = new THREE.Mesh (boxGeometry, boxMaterial);
+	scene.add (arm);
+
+	boxGeometry = new THREE.BoxGeometry (90, 10,10);
+	boxMaterial2 = new THREE.MeshLambertMaterial ({color: 0xff00ff, wireframe:false});
+	arm2 = new THREE.Mesh (boxGeometry, boxMaterial2);
+	arm.add (arm2);
+
+	// base
+	var cyl_geom = new THREE.CylinderGeometry (10,10,6,32);
+	var cyl_mat = new THREE.MeshLambertMaterial ({color: 0xff2211});
+	end = new THREE.Mesh (cyl_geom, cyl_mat);
+	scene.add (end);
+
+	var gridXZ = new THREE.GridHelper(100, 10);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0xffffff) );
+	scene.add(gridXZ);
+
+	var pointLight = new THREE.PointLight (0xffffff);
+	pointLight.position.set (0,300,200);
+	scene.add (pointLight);
+
+	var ambientLight = new THREE.AmbientLight (0x111111);
+	scene.add(ambientLight);
+
+	window.addEventListener ('resize', onWindowResize, false);	
+	renderer.domElement.addEventListener ('mousemove', onDocumentMouseMove, false);
+}
+
+//
+// somehow this gives error in r68
+// (must use r69)
+//
+function onDocumentMouseMove( event ) {
+	event.preventDefault();
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+	// tracer: find intersection on xz plane
+	var depth0 = new THREE.Vector3( mouse.x, mouse.y, 0.0 ).unproject( camera );
+	var depth1 = new THREE.Vector3( mouse.x, mouse.y, 1.0 ).unproject( camera );
+
+	var t = depth0.y / (depth0.y - depth1.y);
+	var x = depth0.x + t * (depth1.x - depth0.x);
+	var z = depth0.z + t * (depth1.z - depth0.z);
+	target.set (x,0,z);
+}
+
+function animate()
+{
+	requestAnimationFrame ( animate );  
+	update();
+	render();  
+}
+
+function update()
+{
+	controls.update();
+
+	var joints = [];
+	for (var i = 0; i < 3; i++) joints[i] = new THREE.Vector3();
+	
+	var dt = clock.getElapsedTime();
+	
+	var theta = [theta1, theta2]; // for call-by-reference
+	ik_ccd (target, theta);
+//	console.log ("THETA1&2: " + theta1 + ", " + theta2);
+	
+}
+
+function onWindowResize()
+{
+	var width = container.clientWidth;
+	var height = container.clientHeight;
+	camera.aspect = width / height;
+	camera.updateProjectionMatrix();
+	renderer.setSize (width, height);
+}
+
+function render()
+{
+	arm.rotation.y = theta1;
+	arm.position.set (30*Math.cos(theta1),0,-30*Math.sin(theta1));
+	
+	arm2.rotation.y = theta2;
+	arm2.position.set (30+45*Math.cos(theta2), 0, -45*Math.sin(theta2));
+	
+	renderer.render (scene, camera);
+}
+</script>
+</body>
+
+</html>

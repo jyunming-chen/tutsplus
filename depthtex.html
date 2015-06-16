@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+body {
+    background-color: #000000;
+    margin: 0;
+    overflow: hidden;
+}
+
+</style>
+</head>
+
+<body> 
+<script src="http://mrdoob.github.com/three.js/build/three.min.js"></script>
+<script src="http://mrdoob.github.com/three.js/examples/js/shaders/CopyShader.js"></script>
+<script src="http://mrdoob.github.com/three.js/examples/js/shaders/SSAOShader.js"></script>
+<script src="http://mrdoob.github.com/three.js/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="http://mrdoob.github.com/three.js/examples/js/postprocessing/RenderPass.js"></script>
+<script src="js/shaders/MyDotScreenShader.js"></script>
+<script src="http://mrdoob.github.com/three.js/examples/js/postprocessing/MaskPass.js"></script>
+<script src="http://mrdoob.github.com/three.js/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="js/OrbitControls.js"></script>
+
+<script>
+// from: http://goo.gl/RzfwH
+
+
+var camera, scene, renderer;
+var group;
+var depthMaterial, depthTarget, composer;
+var controls;
+
+
+init();
+animate();
+
+function init() {
+
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 10, 2000);
+    camera.position.z = 300;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+    scene = new THREE.Scene();
+
+    group = new THREE.Object3D();
+    scene.add(group);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    var geometry = new THREE.BoxGeometry(10, 10, 10);
+    var material = new THREE.MeshBasicMaterial({
+        color: 0xff00ff,
+//        side: THREE.BackSide
+    });
+
+    for (var i = -5; i < 5; i++) {
+
+        var mesh = new THREE.Mesh(geometry, material);
+        mesh.position.x = i*(-100);  // random() [0,1)
+        mesh.position.y = i*(-100);
+        mesh.position.z = i*(-100);
+   //     mesh.rotation.x = Math.random();
+     //   mesh.rotation.y = Math.random();
+       // mesh.rotation.z = Math.random();
+        mesh.scale.x = mesh.scale.y = mesh.scale.z = Math.random() * 10 + 1;
+        group.add(mesh);
+
+    }
+
+    // depth
+
+    var depthShader = THREE.ShaderLib["depthRGBA"];
+    var depthUniforms = THREE.UniformsUtils.clone(depthShader.uniforms);
+
+    depthMaterial = new THREE.ShaderMaterial({
+        fragmentShader: depthShader.fragmentShader,
+        vertexShader: depthShader.vertexShader,
+        uniforms: depthUniforms
+    });
+    depthMaterial.blending = THREE.NoBlending;
+
+    // postprocessing
+
+    composer = new THREE.EffectComposer(renderer);
+    var effect = new THREE.RenderPass(scene, camera)
+    composer.addPass(effect);
+
+    depthTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+        minFilter: THREE.NearestFilter,
+        magFilter: THREE.NearestFilter,
+        format: THREE.RGBAFormat
+    });
+//    effect.renderToScreen = true;
+      var effect = new THREE.ShaderPass(THREE.DotScreenShader);
+    effect.uniforms['scale'].value = 2;
+    composer.addPass(effect);
+     effect.renderToScreen = true;
+    
+/*
+    var effect = new THREE.ShaderPass(THREE.SSAOShader);
+    effect.uniforms['tDepth'].value = depthTarget;
+    effect.uniforms['size'].value.set(window.innerWidth, window.innerHeight);
+    effect.uniforms['cameraNear'].value = camera.near;
+    effect.uniforms['cameraFar'].value = camera.far;
+    effect.renderToScreen = true;
+    composer.addPass(effect);
+*/
+}
+
+function animate() {
+controls.update();
+    requestAnimationFrame(animate);
+
+    // performance.now()
+    // return high-res timer (in msec), accurate to 1/1000 of msec
+    //
+   // var timer = performance.now();
+
+    //group.rotation.x = timer * 0.0002;
+  //  group.rotation.y = timer * 0.0001;
+
+    scene.overrideMaterial = depthMaterial;
+    renderer.render(scene, camera, depthTarget);
+    // render (scene, camera, renderTarget, forceClear);
+    
+    scene.overrideMaterial = null;
+    composer.render();
+
+
+}
+</script>
+</body>
+
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #ffff00
+	}
+	a {color: yellow}
+	strong {color:red}
+</style>
+</head>
+
+<body>
+<div id="container"></div>
+<div id="info">
+    webgl tutorial S-4 <br/><br/>
+	GLSL Render-To-Texture<br/>
+</div>
+<script src="js/r69/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+
+<script id="myVertexShader" type="x-shader/x-vertex">
+	varying vec2 vUv;
+	void main() {
+		gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0);
+		vUv = uv;
+	}
+</script>
+<script id="myFragmentShader" type="x-shader/x-fragment">
+	uniform sampler2D texture;
+	varying vec2 vUv;
+	
+	void main() {
+		gl_FragColor = vec4 (.2,.2,.2,0) +texture2D (texture, vUv);
+	}
+</script>
+
+<script>
+var renderer, camera, controls;
+var pointLight;
+var container, scene, sceneRTT, rtTexture, teapot;
+var rttmaterial, quad;
+ 
+init();
+animate();
+
+"use strict";
+
+function init()
+{
+	container = document.getElementById ('container');
+	
+	// render a rotating teapot to texture
+	// then apply the texture to a quad
+	
+	sceneRTT = new THREE.Scene();	
+	pointLight = new THREE.PointLight (0xffffff);
+	pointLight.position.set (0,300,200);
+	sceneRTT.add (pointLight);
+	
+	rtTexture = new THREE.WebGLRenderTarget( 
+		window.innerWidth, window.innerHeight, 
+		{ minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat } 
+		);
+	//rtTexture.setClearColor (0x333300);  wont work
+	
+	var jsonLoader = new THREE.JSONLoader();
+	jsonLoader.load ("models/teapot.json", function (geometry) {
+		teapot = new THREE.Mesh (geometry, new THREE.MeshLambertMaterial({color:0xff1234}));
+		teapot.scale.set (32,32,32);
+		sceneRTT.add (teapot);
+	});
+
+	scene = new THREE.Scene();
+	rttmaterial = new THREE.ShaderMaterial( {
+		uniforms: {texture: {type: "t", value: rtTexture}},
+		vertexShader: document.getElementById( 'myVertexShader' ).textContent,
+		fragmentShader: document.getElementById( 'myFragmentShader' ).textContent} 
+		);
+	var plane = new THREE.PlaneBufferGeometry( 300,300 );
+	quad = new THREE.Mesh (plane, rttmaterial);
+	rttmaterial.side = THREE.DoubleSide;
+	scene.add (quad);
+	
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (window.innerWidth, window.innerHeight);
+	container.appendChild (renderer.domElement);
+	renderer.setClearColor (0x888888);
+	
+	camera = new THREE.PerspectiveCamera (45, window.innerWidth/window.innerHeight, 0.1, 10000);
+	camera.position.y = 80;
+	camera.position.z = 400;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	// add control here (after the camera is defined)
+	controls = new THREE.OrbitControls (camera, renderer.domElement);
+
+	var ambientLight = new THREE.AmbientLight (0x555555);
+	scene.add(ambientLight);
+
+	window.addEventListener ('resize', onWindowResize, false);	
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+var angle = 0;
+function animate()
+{
+	angle += 0.005;
+	controls.update();
+	
+	requestAnimationFrame ( animate );
+
+	if (teapot !== undefined)
+		teapot.rotation.y = -angle;
+	
+	// render teapot to texture
+	renderer.render (sceneRTT, camera, rtTexture, true);
+	
+	// render texture to screne
+	renderer.render (scene, camera);
+}
+
+
+</script>
+</body>
+
+</html>

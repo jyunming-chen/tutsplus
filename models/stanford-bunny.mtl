@@ -1,0 +1,12 @@
+# 
+# Wavefront material file
+# Created with Kaydara FBX
+# 
+
+newmtl Shiny_Plastic
+Ka 0.000000 0.000000 0.000000
+Kd 0.847862 0.881962 1.000000
+Ks 1.000000 0.984314 0.984314
+illum 2
+Ns 527.000000
+Tr 0.000000

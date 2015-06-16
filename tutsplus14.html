@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fog Example</title>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		position: absolute;
+		font-size: 20px;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #00ffff
+	}
+	a {color: yellow}
+	strong {color:red}
+</style>
+</head>
+<body>
+
+  <div id="container"> </div>
+  <div id = "info"> 
+     webgl tutorial 14 <br/>
+	 Fog <br/><br/>
+  </div>
+	
+<script src="js/r69/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/dat.gui.min.js"></script>
+
+<script>
+////////////////////////////////////////////////////////////////////////////////
+// Fog demo, showing different types of fog in action
+// from:
+// https://www.udacity.com/course/viewer#!/c-cs291/l-124106593/m-170440734
+////////////////////////////////////////////////////////////////////////////////
+
+var camera, scene, renderer;
+var cameraControls, effectController;
+var clock = new THREE.Clock();
+
+var cylinder, sphere, cube;
+
+var headlight;
+
+var oldFogOn = false;
+var oldFogExp = false;
+
+init();
+setupGui();
+animate();
+
+function init() {
+
+	var canvasWidth = window.innerWidth;
+	var canvasHeight = window.innerHeight;
+
+	renderer = new THREE.WebGLRenderer( { antialias: true } );
+	renderer.setSize(canvasWidth, canvasHeight);
+	//renderer.setClearColorHex( 0x0, 1.0 );
+
+	var container = document.getElementById('container');
+	container.appendChild( renderer.domElement );
+
+	// CAMERA
+	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+	camera.position.set( -1160, 350, -600 );
+
+	// CONTROLS
+	cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+
+	window.addEventListener ('resize', onWindowResize, false);		
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+function fillScene() {
+	scene = new THREE.Scene();
+	//scene.fog = new THREE.Fog( 0x0, 2000, 4000 );
+
+	// LIGHTS (why so many lights?)
+	scene.add( new THREE.AmbientLight( 0x222222 ) );
+
+	var light = new THREE.DirectionalLight( 0xFFFFFF, 1.0 );
+	light.position.set( 200, 400, 500 );
+
+	scene.add( light );   // ptlight #1
+
+	light = new THREE.DirectionalLight( 0xFFFFFF, 1.0 );
+	light.position.set( -400, 200, -300 );
+
+	scene.add( light );   // ptlight #2
+
+	headlight = new THREE.PointLight( 0xFFFFFF, 0.3 );
+	scene.add( headlight ); // ptlight #3
+
+	///////////////////////
+	// GROUND
+
+	// put grid lines every 10000/100 = 100 units
+	var solidGround = new THREE.Mesh(
+		new THREE.PlaneGeometry( 10000, 10000 ),
+		new THREE.MeshPhongMaterial({ color: 0xFFFFFF ,
+			// polygonOffset moves the plane back from the eye a bit, so that the lines on top of
+			// the grid do not have z-fighting with the grid:
+			// Factor == 1 moves it back relative to the slope (more on-edge means move back farther)
+			// Units == 4 is a fixed amount to move back, and 4 is usually a good value
+			
+			polygonOffset: true, polygonOffsetFactor: 1.0, polygonOffsetUnits: 4.0
+		}));
+	solidGround.rotation.x = -Math.PI / 2;
+
+	scene.add( solidGround );
+
+	var ground = new THREE.Mesh(
+		new THREE.PlaneGeometry( 10000, 10000, 100, 100 ),
+		new THREE.MeshBasicMaterial( { color: 0x0, wireframe: true } ) );
+	ground.rotation.x = - Math.PI / 2;
+
+	scene.add( ground );
+
+	// some regularly spaced cubes
+	var x,z;
+
+	for ( x = -4500; x <= 4500; x += 1000 ) {
+		for ( z = -4500; z <= 4500; z += 1000 ) {
+			var blockMaterial = new THREE.MeshLambertMaterial();
+			// sort-of random but repeatable colors
+			blockMaterial.color.setRGB( ((x+4500)%373)/373, ((x+z+9000)%283)/283, ((z+4500)%307)/307 );
+			blockMaterial.ambient.copy( blockMaterial.color );
+			var block = new THREE.Mesh(
+				new THREE.BoxGeometry( 100, 300, 100 ), blockMaterial );
+			block.position.set( x, 150, z );
+			scene.add( block );
+		}
+	}
+}
+
+function animate() {
+	window.requestAnimationFrame(animate);
+	render();
+}
+
+function render() {
+	var delta = clock.getDelta();
+	cameraControls.update(delta);
+
+	// JSHint doesn't like this code, I'm not sure why...
+	var hex =
+		(Math.floor(effectController.red*255) << 16) |
+		(Math.floor(effectController.green*255) << 8) |
+		(Math.floor(effectController.blue*255));
+
+	// make renderer and scene color the same; looks peculiar otherwise, as fog fades
+	// and the background color is different
+	renderer.setClearColor ( hex, 1.0 );
+
+	if ( oldFogOn !== effectController.fogOn ||
+		oldFogExp !== effectController.fogExp ||
+		scene === undefined )
+	{
+		oldFogOn = effectController.fogOn;
+		oldFogExp = effectController.fogExp;
+
+		// have to start from scratch in three.js when fog type is changed;
+		// must be set before first render
+		fillScene();
+	}
+
+	if ( effectController.fogOn )
+	{
+		if ( effectController.fogExp )
+		{
+			scene.fog = new THREE.FogExp2( hex, effectController.fogDensity );
+		}
+		else
+		{
+			scene.fog = new THREE.Fog( hex, effectController.fogNear,
+				// don't allow near > far
+				( effectController.fogFar >= effectController.fogNear ) ? effectController.fogFar : effectController.fogNear );
+		}
+	}
+
+	headlight.position.copy( camera.position );
+	renderer.render(scene, camera);
+}
+
+function setupGui() {
+
+	effectController = {
+		fogOn:true,
+		fogNear:2000,
+		fogFar:4000,
+		fogExp:false,
+		fogDensity:0.0004,
+
+		red:0.556,
+		green:0.616,
+		blue:0.573
+		//fogColor:[ 142, 157, 146 ]
+	};
+
+	var gui = new dat.GUI();
+	// if I put the fog color later in the list, it turns into a CSS control
+	// number instead of an array. If I click off the window, it goes to CSS.
+	// Flakiness...
+	//gui.addColor(effectController, "fogColor").name("fog color");
+	gui.add(effectController, "fogOn").name("use fog");
+	gui.add(effectController, "fogNear", 0, 10000).name("linear fog: near");
+	gui.add(effectController, "fogFar", 0, 10000).name("linear fog: far");
+	gui.add(effectController, "fogExp").name("use exponential fog");
+	gui.add(effectController, "fogDensity",0, 0.002).name("exp. fog: density");
+	gui.add(effectController, "red", 0,1).name("red");
+	gui.add(effectController, "green", 0,1).name("green");
+	gui.add(effectController, "blue", 0,1).name("blue");
+}
+
+</script>
+</body>
+</html>

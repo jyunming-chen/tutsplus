@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #ffff00
+	}
+	a {color: 0x005500}
+</style>
+</head>
+
+<body>
+
+<div id="info">
+webgl tutorial:  JSON Loader <br/>
+Hit 'C' to clear<br/>
+</div>
+<input type="file" style="position:absolute;bottom: 20px;left:48%; z-index: 999;" id="fileSel"/>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r69/three.js"></script>
+<!--script src="js/r69/three.min.js"></script-->
+<script src="js/OrbitControls.js"></script>
+<script src="js/KeyboardState.js"></script>
+<script src="js/dat.gui.min.js"></script>
+
+<script>
+
+var clock = new THREE.Clock();
+var scene, renderer, camera;
+var cube;
+var controls;
+var jsonModel;
+var keyboard = new KeyboardState();
+var angle = 0;
+var turn = 1;
+var fileSelect = document.getElementById("fileSel");
+fileSelect.addEventListener("change", doOpen, false);
+var loaderChoice;
+
+init();
+animate();
+
+function init()
+{
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0x888888);
+	
+	document.body.appendChild (renderer.domElement);
+
+	scene = new THREE.Scene();
+
+	camera = new THREE.PerspectiveCamera (45, width/height, 0.1, 10000);
+	camera.position.y = 32;
+	camera.position.z = 80;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	// add control here (after the camera is defined)
+	controls = new THREE.OrbitControls (camera, renderer.domElement);
+
+	var gridXZ = new THREE.GridHelper(100, 10);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0xffffff) );
+	scene.add(gridXZ);
+
+	var pointLight = new THREE.PointLight (0xffffff);
+	pointLight.position.set (0,300,200);
+	scene.add (pointLight);
+
+	// UI
+	loaderChoice = {
+		loader: 'JSONLoader',
+		scale: 1.0
+	};
+		
+	var gui = new dat.GUI();
+	gui.add (loaderChoice, 'loader', ['JSONLoader', 'ObjectLoader']);
+	gui.add (loaderChoice, 'scale', 0, 10);
+	
+	//
+
+	var ambientLight = new THREE.AmbientLight (0x111111);
+	scene.add(ambientLight);
+	window.addEventListener ('resize', onWindowResize, false);	
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+////////////////////////////////////////////////////////////
+function LoadJSON (name)
+{
+	//alert (loaderChoice.loader);
+	if (loaderChoice.loader === 'JSONLoader') {
+		try {
+		var jsonLoader = new THREE.JSONLoader();
+		jsonLoader.load ("models/" + name, addModelToScene);				
+		} catch (err) {
+			debugger;
+			alert ("fail to JSONLoad");
+		}
+	} 
+	
+	else if (loaderChoice.loader === 'ObjectLoader') {
+	
+		var loader = new THREE.ObjectLoader();
+		loader.load("models/" + name, function ( obj ) {
+/*
+	var minX = minY = minZ = 1e10;
+	var maxX = maxY = maxZ = -1e10;
+    obj.traverse (function (mesh)
+    {
+        if (mesh instanceof THREE.Mesh)
+        {
+            mesh.geometry.computeBoundingBox ();
+            var bBox = mesh.geometry.boundingBox;
+
+            // compute overall bbox
+            minX = Math.min (minX, bBox.min.x);
+            minY = Math.min (minY, bBox.min.y);
+            minZ = Math.min (minZ, bBox.min.z);
+            maxX = Math.max (maxX, bBox.max.x);
+            maxY = Math.max (maxY, bBox.max.y);
+            maxZ = Math.max (maxZ, bBox.max.z);
+        }
+    }
+
+	);
+	*/
+	
+		jsonModel = obj;
+
+	// I have encountered one example
+	// where the mesh.matrix has scaling factors in its diagonal elements
+	// thus, the bounding box from vertices do not correspond to the exact size
+	// (actually, it was exported from clara.io ... the bunny)
+	// thus, output as OBJ/MTL format might be more straightforward
+	//
+/*
+	var lenX,lenY,lenZ;
+	lenX = maxX-minX; lenY = maxY-minY; lenZ = maxZ-minZ;
+	len = Math.max (lenX,lenY);
+	len = Math.max (len, lenZ);
+	var s = 200/len;
+	obj.scale.set (s,s,s);
+	obj.position.set ((minX+maxX)/2, (minY+maxY)/2, (minZ+maxZ)/2);
+*/	
+		scene.add (obj);
+		});
+	}
+
+	
+}
+
+function addModelToScene ( geometry, materials )
+{
+	//scene.remove (jsonModel);
+
+	var material = new THREE.MeshFaceMaterial (materials);
+	jsonModel = new THREE.Mesh (geometry, material);
+	scene.add (jsonModel);
+}
+///////////////////////////////////////////////////
+
+function doOpen(evt) {
+   var files = evt.target.files;
+   var reader = new FileReader();
+
+   reader.onload = function(){
+		//readContour (this.result);
+		//alert(this.result);
+    };
+	
+	//debugger;
+    reader.readAsText(files[0]);
+	//alert (files[0].name);
+	LoadJSON (files[0].name);
+}
+
+
+function animate()
+{
+	requestAnimationFrame ( animate ); 
+	update();
+	render();  
+}
+
+function update()
+{
+	controls.update();
+	keyboard.update();
+	
+	if (keyboard.down ("C")) {
+		if (jsonModel) scene.remove (jsonModel);
+		
+/*... try to remove all mesh children		
+		console.log (scene.children.length);
+		for (var i = 0; i < scene.children.length; i++) {
+			if (scene.children[i] instanceof THREE.Mesh) 
+				scene.remove (scene.children[i]);
+		}
+	scene.traverse (function (mesh)
+			{
+				if (mesh instanceof THREE.Mesh) {
+					scene.remove (mesh);
+				}
+			});*/
+	}
+}
+
+
+function render()
+{
+	if (jsonModel)
+		jsonModel.scale.set (loaderChoice.scale,loaderChoice.scale,loaderChoice.scale);
+	renderer.render (scene, camera);
+}
+
+
+</script>
+</body>
+
+</html>

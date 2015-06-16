@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #444400
+	}
+	#info2 {
+		position: absolute;
+		bottom: 50px; width: 100%;
+		text-align: center;
+		color: #444400
+	}
+	a {color: 0x005500}
+</style>
+</head>
+
+<body> 
+<div id="info">
+webgl tutorial 25-1: Sketcher <br/>
+Left button to add; Right button to terminate <br/>
+</div>
+<div id="info2">
+Hit 'C' to clear; Hit 'S' to save<br/>
+</div>
+<input type="file" style="position:absolute;bottom: 8px;left:48%; z-index: 999;" id="fileSel"/>
+<!--button id="uploadBtn" style="position:absolute;bottom: 8px;left:48%; z-index: 999;">Custom Upload</button-->
+
+<!--script src="https://code.jquery.com/jquery-2.1.3.min.js"></script-->
+<script src="js/r69/three.min.js"></script>
+<script src="js/KeyboardState.js"></script>
+<script src="lineUtil.js"></script>
+
+<!--script src="http://purl.eligrey.com/github/FileSaver.js/blob/master/FileSaver.js"></script-->
+<!--script src="https://github.com/eligrey/Blob.js"></script-->
+<script src="js/FileSaver.js"></script>
+
+<script> 
+  document.oncontextmenu=function(){return false;} 
+</script>
+
+
+<script>
+var scene, renderer, camera;
+var plane, cyl;
+var mouse = new THREE.Vector2();
+var keyboard = new KeyboardState();
+
+var fileSelect = document.getElementById("fileSel");
+fileSelect.addEventListener("change", doOpen, false);
+
+var myLine;
+
+var nolineyet = true;
+
+init();
+animate();
+
+function init()
+{
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0xeeeeee);
+	
+	document.body.appendChild (renderer.domElement);
+	
+	scene = new THREE.Scene();
+
+	camera = new THREE.OrthographicCamera (-15,15,15,-15, 1, 100);
+	camera.position.x = 0;
+	camera.position.y = 0;
+	camera.position.z = 50;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	var gridXZ = new THREE.GridHelper(10, 1);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0x999999) );
+	//gridXZ.material = new THREE.LineDashedMaterial( { color: 0x00cc00, dashSize: 1, gapSize: 1 } );
+	gridXZ.rotation.x = Math.PI/2;
+	scene.add(gridXZ);
+
+	window.addEventListener ('resize', onWindowResize, false);	
+	//window.addEventListener( 'mousemove', onDocumentMouseMove, false );
+	window.addEventListener( 'mousedown', onDocumentMouseDown, false );
+
+}
+
+
+function onDocumentMouseDown (event) {
+	event.preventDefault();
+	// NDC: [-1,1]x[-1,1]
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+	if (event.button === 0) {  // left button
+		++npoints;
+		var myPoint = new THREE.Vector3(mouse.x*15, mouse.y*15,0);
+		if (nolineyet) { 
+			myLine = createNewLine (myPoint);
+			scene.add (myLine);
+			nolineyet = false;
+		} else {
+			addPoint (myPoint);
+		}
+
+	} else if (event.button === 2) {  // right BUTTON
+		nolineyet = true;
+
+		// once line is terminated, do not draw further
+		window.removeEventListener( 'mousedown', onDocumentMouseDown);
+	}
+	
+}
+
+function onDocumentMouseMove( event ) {
+	event.preventDefault();
+	// NDC: [-1,1]x[-1,1]
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+	//console.log (mouse.x + ", " + mouse.y);
+}
+
+
+function doOpen(evt) {
+   var files = evt.target.files;
+   var reader = new FileReader();
+
+   reader.onload = function(){
+		readContour (this.result);
+		//alert(this.result);
+    };
+	
+    reader.readAsText(files[0]);
+
+	window.removeEventListener( 'mousedown', onDocumentMouseDown);
+}
+
+function animate()
+{
+	keyboard.update();
+	
+	if ( keyboard.down("C") )  {
+		clearLine(); 
+		window.addEventListener( 'mousedown', onDocumentMouseDown, false );
+	}
+
+	if ( keyboard.down ("S") ) {
+		var filename = prompt ("File? ", "data.txt");
+
+		var string = outputContour ();
+		var blob = new Blob([string], {type: "text/plain;charset=utf-8"});
+		saveAs(blob, filename);
+	}
+
+	requestAnimationFrame ( animate );  
+	render(); 
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+function render()
+{
+	console.log ("Scene has: " + scene.children.length);
+	
+	renderer.render (scene, camera);
+}
+</script>
+</body>
+
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #ffff00
+	}
+</style>
+</head>
+
+<body> 
+<div id="info">
+webgl tutorial 25 <br/><br/>
+Sketcher
+</div>
+
+<script src="js/r69/three.min.js"></script>
+
+<script>
+
+var scene, renderer, camera;
+var plane, cyl;
+var mouse = new THREE.Vector2();
+
+var myLine;
+var MAX_LINE_POINTS = 100;
+
+var lineGeometry;
+
+
+init();
+animate();
+
+function init()
+{
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0xeeeeee);
+	
+	document.body.appendChild (renderer.domElement);
+	
+	scene = new THREE.Scene();
+
+	camera = new THREE.OrthographicCamera (-15,15,15,-15, 1, 100);
+	camera.position.x = 0;
+	camera.position.y = 0;
+	camera.position.z = 50;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	var gridXZ = new THREE.GridHelper(10, 1);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0x999999) );
+	//gridXZ.material = new THREE.LineDashedMaterial( { color: 0x00cc00, dashSize: 1, gapSize: 1 } );
+	gridXZ.rotation.x = Math.PI/2;
+	scene.add(gridXZ);
+
+	window.addEventListener ('resize', onWindowResize, false);	
+	window.addEventListener( 'mousemove', onDocumentMouseMove, false );
+	window.addEventListener( 'mousedown', onDocumentMouseDown, false );
+
+/*	
+	lineGeometry = new THREE.Geometry();
+	lineGeometry.vertices.push( new THREE.Vector3(7,5,0), new THREE.Vector3(4, 12, 0), new THREE.Vector3(-10, 10, 0) );
+
+	//lineGeometry.computeLineDistances();
+	var lineMaterial = new THREE.LineBasicMaterial( { color: 0x222222 } );
+	//lineMaterial = new THREE.LineDashedMaterial( { color: 0x00cc00, dashSize: 1, gapSize: 1 } );
+	var line = new THREE.Line( lineGeometry, lineMaterial );
+*/
+	//myLine = createNewLine ();
+	
+	//scene.add(myLine);
+}
+
+var myLine;
+
+function createNewLine(startingPoint){
+    var geometry = new THREE.Geometry();
+	
+	for (var i = 0; i < MAX_LINE_POINTS; i++) {
+		geometry.vertices.push(startingPoint.clone());
+    }
+
+    myLine =  new THREE.Line(geometry,  new THREE.LineBasicMaterial( { color: 0x222222 } ));
+    // myLine.geometry.dynamic = true; // default
+    scene.add(myLine);
+}
+
+function addPoint(myPoint) {
+    myLine.geometry.vertices.push(myLine.geometry.vertices.shift()); //shift the array
+    myLine.geometry.vertices[maxLinePoints-1] = myPoint; //add the point to the end of the array
+    myLine.geometry.verticesNeedUpdate = true;
+    //render();
+}
+
+var nolineyet = true;
+function onDocumentMouseDown (event) {
+	event.preventDefault();
+	// NDC: [-1,1]x[-1,1]
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+	if (event.button === 0) {
+		var myPoint = new THREE.Vector3(mouse.x*15, mouse.y*15,0);
+		if (nolineyet) { 
+			createNewLine (myPoint);
+			nolineyet = false;
+		} else {
+			myLine.geometry.vertices.push(myLine.geometry.vertices.shift()); //shift the array
+			myLine.geometry.vertices[MAX_LINE_POINTS-1] = myPoint; //add the point to the end of the array
+			myLine.geometry.verticesNeedUpdate = true;
+		}
+	} else if (event.button === 1) {
+		console.log ("middle button");
+		nolineyet = true;
+	}
+	
+}
+
+function onDocumentMouseMove( event ) {
+	event.preventDefault();
+	// NDC: [-1,1]x[-1,1]
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+	//console.log (mouse.x + ", " + mouse.y);
+}
+
+function animate()
+{
+	requestAnimationFrame ( animate );  
+	//controls.update();
+	render(); 
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+function render()
+{
+//	console.log (lineGeometry.vertlength);
+	
+	renderer.render (scene, camera);
+}
+</script>
+</body>
+
+</html>

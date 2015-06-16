@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+ <head> 
+  <title>Rigid body - Physijs</title> 
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #00ffff
+	}
+	a {color: yellow}
+	strong {color:red}
+</style>
+ </head> 
+
+ <body> 
+  <div id="viewport"></div>  
+
+  <div id = "info"> 
+     webgl tutorial 23-2 <br/>
+	 Physijs Platform <br/><br/>
+	 (<a href="http://www.smartjava.org/content/all-109-examples-my-book-threejs-threejs-version-r63">Reference</a>)
+  </div>
+  
+  <script src="js/r69/three.min.js"></script> 
+  <script src="js/OrbitControls.js"></script>
+  <script src="js/physijs/physi.js"></script> 
+  <script src="js/dat.gui.min.js"></script> 
+  <script src="js/chroma.js"></script> 
+
+<script>
+'use strict';
+
+Physijs.scripts.worker = 'js/physijs/physijs_worker.js';
+Physijs.scripts.ammo = 'ammo.js';
+
+var scale = chroma.scale(['white', 'blue', 'red', 'yellow']);
+
+var render,
+    ground_material, box_material,
+    renderer, scene, ground, light, camera, box, boxes = [];
+var orbitcontrols;
+var direction = 1;
+
+init();
+render();
+		
+function init () {
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(new THREE.Color(0x666666));
+
+    document.getElementById('viewport').appendChild(renderer.domElement);
+
+    scene = new Physijs.Scene();
+    scene.setGravity(new THREE.Vector3(0, -90, 0));
+	
+    scene.addEventListener('update', function() {
+      scene.simulate(undefined, 2);
+    });
+	
+    camera = new THREE.PerspectiveCamera(
+            45,
+            window.innerWidth / window.innerHeight,
+            1,
+            10000
+    );
+    camera.position.set(80, 60, 80);
+	camera.lookAt(scene.position);
+
+    scene.add(camera);
+
+	orbitcontrols = new THREE.OrbitControls (camera, renderer.domElement);
+	
+    // Light
+    light = new THREE.SpotLight(0xFFFFFF);
+    light.position.set(20, 100, 50);
+
+    scene.add(light);
+
+    // Materials
+	
+    ground_material = Physijs.createMaterial(
+            new THREE.MeshPhongMaterial({ map: THREE.ImageUtils.loadTexture('images/floor-wood.jpg') }),
+            .9, // high friction
+            .6 // low restitution
+    );
+    ground_material.map.wrapS = ground_material.map.wrapT = THREE.RepeatWrapping;
+    ground_material.map.repeat.set(4, 8);
+	
+    // Ground
+    ground = new Physijs.BoxMesh(
+            new THREE.BoxGeometry(60, 1, 130),
+            ground_material,
+            0 // mass
+    );
+
+    ground.receiveShadow = true;
+
+    var borderLeft = new Physijs.BoxMesh(
+            new THREE.BoxGeometry(2, 6, 130),
+            ground_material,
+            0 // mass
+    );
+
+    borderLeft.position.x = -31;
+    borderLeft.position.y = 2;
+
+    ground.add(borderLeft);
+
+    var borderRight = new Physijs.BoxMesh(new THREE.BoxGeometry(2, 6, 130),
+            ground_material,
+            0 // mass
+    );
+    borderRight.position.x = 31;
+    borderRight.position.y = 2;
+
+    ground.add(borderRight);
+
+
+    var borderBottom = new Physijs.BoxMesh(
+            new THREE.BoxGeometry(64, 6, 2),
+            ground_material,
+            0 // mass
+    );
+
+    borderBottom.position.z = 65;
+    borderBottom.position.y = 2;
+    ground.add(borderBottom);
+
+    var borderTop = new Physijs.BoxMesh(
+            new THREE.BoxGeometry(64, 6, 2),
+            ground_material,
+            0 // mass
+    );
+
+    borderTop.position.z = -65;
+    borderTop.position.y = 2;
+    ground.add(borderTop);
+
+    scene.add(ground);
+
+    var meshes = [];
+
+    var controls = new function () {
+        this.cubeRestitution = 0.4;
+        this.cubeFriction = 0.4;
+        this.sphereRestitution = 0.9;
+        this.sphereFriction = 0.1;
+
+        this.clearMeshes = function () {
+            meshes.forEach(function (e) {
+                scene.remove(e);
+            });
+            meshes = [];
+        };
+
+        this.addSpheres = function () {
+            var colorSphere = scale(Math.random()).hex();
+            for (var i = 0; i < 5; i++) {
+
+                box = new Physijs.SphereMesh(
+
+                        new THREE.SphereGeometry(2, 20),
+                        Physijs.createMaterial(
+                                new THREE.MeshPhongMaterial(
+                                        {   color: colorSphere,
+                                            opacity: 0.8,
+                                            transparent: true
+//                                                        map: THREE.ImageUtils.loadTexture( '../assets/textures/general/floor-wood.jpg' )
+                                        }),
+                                controls.sphereFriction,
+                                controls.sphereRestitution
+                        )
+                );
+                box.position.set(
+                        Math.random() * 50 - 25,
+                        20 + Math.random() * 5,
+                        Math.random() * 50 - 25
+                );
+                meshes.push(box);
+                scene.add(box);
+            }
+            ;
+        };
+
+        this.addCubes = function () {
+
+            var colorBox = scale(Math.random()).hex();
+
+            for (var i = 0; i < 5; i++) {
+
+                box = new Physijs.BoxMesh(
+                        new THREE.CubeGeometry(4, 4, 4),
+//                            new THREE.SphereGeometry( 2, 20 ),
+                        Physijs.createMaterial(
+                                new THREE.MeshPhongMaterial({
+                                    color: colorBox,
+                                    opacity: 0.8,
+                                    transparent: true
+//                                                map: THREE.ImageUtils.loadTexture( '../assets/textures/general/stone.jpg' )
+                                }),
+                                controls.cubeFriction,
+                                controls.cubeRestitution
+                        )
+                );
+                box.position.set(
+                        Math.random() * 50 - 25,
+                        20 + Math.random() * 5,
+                        Math.random() * 50 - 25
+                );
+                box.rotation.set(
+                        Math.random() * Math.PI * 2,
+                        Math.random() * Math.PI * 2,
+                        Math.random() * Math.PI * 2);
+
+                meshes.push(box);
+                scene.add(box);
+            }
+
+
+        }
+    }
+
+    var gui = new dat.GUI();
+    gui.add(controls, 'cubeRestitution', 0, 1);
+    gui.add(controls, 'cubeFriction', 0, 1);
+    gui.add(controls, 'sphereRestitution', 0, 1);
+    gui.add(controls, 'sphereFriction', 0, 1);
+    gui.add(controls, 'addCubes');
+    gui.add(controls, 'addSpheres');
+    gui.add(controls, 'clearMeshes');
+
+	window.addEventListener ('resize', onWindowResize, false);	
+
+	render();
+	//requestAnimationFrame(render); //render();
+	scene.simulate();
+}
+
+	
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+function render () 
+{   
+	orbitcontrols.update();
+	
+	ground.rotation.x += 0.002 * direction;
+    if (ground.rotation.x < -0.4) direction = 1;
+    if (ground.rotation.x > 0.4) direction = -1;
+	
+	ground.__dirtyRotation = true; // with this, ground wont show??... 
+    
+	renderer.render(scene, camera);
+    requestAnimationFrame(render);
+};
+
+</script> 
+</body>
+ </html>

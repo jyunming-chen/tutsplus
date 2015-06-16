@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>Video Texture (Three.js)</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+		text-align: center;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		padding: 10px;
+		text-align: center;
+		color: #ffff00
+	}
+	#playIInfo {
+		position: absolute;
+		bottom: 50px; width: 100%;
+		color: #ffff00;
+		text-align: center;
+	}
+	a {color: #00ffff}
+</style>
+</head>
+<body>
+
+<script src="js/r69/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/KeyboardState.js"></script>
+
+
+<div id="info">
+    webgl tutorial 33 <br/>
+	Video Texture <br/>
+	<a href="https://www.youtube.com/watch?v=HomAZcKm3Jo">Full Movie</a>
+</div>
+<div id="playIInfo">
+	S: stop P: play <br/>
+</div>
+
+<div id="ThreeJS" ></div>
+
+<script>
+/*
+	Three.js "tutorials by example"
+	Author: Lee Stemkoski
+	Date: July 2013 (three.js v59dev)
+*/
+	
+// MAIN
+
+// standard global variables
+var container, scene, camera, renderer, controls;
+var keyboard = new KeyboardState();
+
+// custom global variables
+var video, videoImage, videoImageContext, videoTexture;
+
+init();
+animate();
+
+// FUNCTIONS 		
+function init() 
+{
+	// SCENE
+	scene = new THREE.Scene();
+
+	// CAMERA
+	var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 3000;
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
+
+	renderer = new THREE.WebGLRenderer( {antialias:true} );
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	
+	container = document.getElementById( 'ThreeJS' );
+	container.appendChild( renderer.domElement );
+	
+	// CONTROLS
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+	// LIGHT
+	var light = new THREE.PointLight(0xffffff);
+	light.position.set(0,250,0);
+	scene.add(light);
+
+	// FLOOR
+	var floorTexture = new THREE.ImageUtils.loadTexture( 'images/checkerboard.jpg' );
+	floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+	floorTexture.repeat.set( 10, 10 );
+	var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
+	var floorGeometry = new THREE.PlaneGeometry(500, 500, 10, 10);
+	var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+	floor.position.y = -0.5;
+	floor.rotation.x = Math.PI / 2;
+	scene.add(floor);
+	
+	
+	///////////
+	// VIDEO //
+	///////////
+	
+	// create the video element
+	video = document.createElement( 'video' );
+	// video.id = 'video';
+	// video.type = ' video/ogg; codecs="theora, vorbis" ';
+	video.src = "videos/sintel_trailer.ogv";
+	video.load(); // must call after setting/changing source
+	video.play();
+	
+	// alternative method -- 
+	// create DIV in HTML:
+	// <video id="myVideo" autoplay style="display:none">
+	//		<source src="videos/sintel.ogv" type='video/ogg; codecs="theora, vorbis"'>
+	// </video>
+	// and set JS variable:
+	// video = document.getElementById( 'myVideo' );
+	
+	videoImage = document.createElement( 'canvas' );
+	videoImage.width = 854;
+	videoImage.height = 480;
+
+	videoImageContext = videoImage.getContext( '2d' );
+	// background color if no video present
+	videoImageContext.fillStyle = '#000000';
+	videoImageContext.fillRect( 0, 0, videoImage.width, videoImage.height );
+
+	videoTexture = new THREE.Texture( videoImage );
+	videoTexture.minFilter = THREE.LinearFilter;
+	videoTexture.magFilter = THREE.LinearFilter;
+	
+	var movieMaterial = new THREE.MeshBasicMaterial( { map: videoTexture, overdraw: true, side:THREE.DoubleSide } );
+	// the geometry on which the movie will be displayed;
+	// 		movie image will be scaled to fit these dimensions.
+	var movieGeometry = new THREE.PlaneGeometry( 427, 240, 4,4); //240, 100, 4, 4 );
+	var movieScreen = new THREE.Mesh( movieGeometry, movieMaterial );
+	movieScreen.position.set(0,120,0);
+	scene.add(movieScreen);
+	
+	camera.position.set(0,520,600);
+	camera.lookAt(movieScreen.position);
+
+	window.addEventListener( 'resize', onWindowResize, false );
+	
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+function animate() 
+{
+    requestAnimationFrame( animate );
+	render();		
+	update();
+}
+
+function update()
+{
+	keyboard.update();
+	if ( keyboard.down("P") )
+		video.play();
+/*		
+	if ( keyboard.pressed("space") )
+		video.pause();
+*/
+	if ( keyboard.down("S") ) // stop video
+	{
+		video.pause();
+		video.currentTime = 0;
+	}
+	
+	if ( keyboard.down("R") ) // rewind video
+		video.currentTime = 0;
+	
+	controls.update();
+}
+
+function render() 
+{	
+	if ( video.readyState === video.HAVE_ENOUGH_DATA ) 
+	{
+		videoImageContext.drawImage( video, 0, 0 );
+		if ( videoTexture ) 
+			videoTexture.needsUpdate = true;
+	}
+
+	renderer.render( scene, camera );
+}
+
+</script>
+
+</body>
+</html>

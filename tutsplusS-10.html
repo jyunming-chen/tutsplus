@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+<script src="js/OrbitControls.js">
+</script>
+<script src='js/threex.noiseshadermaterial-3.js'></script>
+<body style='margin: 0px; background-color: #bb00bb; overflow: hidden;'>
+<script>
+
+var renderer, scene, camera, controls, mesh;
+var clock;
+
+init();
+animate();
+
+function init() {
+	clock = new THREE.Clock();
+	
+	renderer	= new THREE.WebGLRenderer();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	document.body.appendChild( renderer.domElement );
+
+	scene	= new THREE.Scene();
+	camera	= new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100 );
+	camera.position.z = 20;
+ 
+	controls = new THREE.OrbitControls(camera, renderer.domElement);
+ 
+	//////////////////////////////////////////////////////////////////////////////////
+	//		add an object and make it move					//
+	//////////////////////////////////////////////////////////////////////////////////	
+	//var geometry	= new THREE.CylinderGeometry(10,10,8, 32);// 10, 20, 30);
+	//var geometry = new THREE.SphereGeometry(20, 32,32);
+	var geometry = new THREE.TorusKnotGeometry(1.0, 0.3, 100, 32);
+	//var geometry = new THREE.BoxGeometry (10,20,30);
+	
+	var material	= new THREEx.NoiseShaderMaterial()
+	material.side = THREE.DoubleSide;
+	mesh	= new THREE.Mesh( geometry, material );
+
+	geometry.computeBoundingSphere();
+	mesh.material.uniforms[ "scale" ].value	= geometry.boundingSphere.radius;
+
+	scene.add( mesh );
+}
+
+function animate() {
+	var delta = clock.getDelta();
+	
+	requestAnimationFrame (animate);
+	controls.update();
+	renderer.render( scene, camera );		
+
+	//mesh.material.uniforms[ "time" ].value	+= delta/15;
+	//mesh.material.uniforms[ "offset" ].value.y	+= delta/20;
+}
+	
+</script>
+</body>

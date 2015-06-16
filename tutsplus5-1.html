@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #ffff00
+	}
+	strong {color:red}
+</style>
+</head>
+
+<body>
+<div id="info">
+    webgl tutorial 5-1 Dynamic Drive<br/><br/>
+	Home to start<br/>
+	Space to stop<br/>
+	Left/Right to turn <br/>
+	Up/Down to accelerate/decelerate<br/>
+	<br/>
+</div>
+
+<script src="js/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/KeyboardState.js"></script>
+<script src="js/loaders/MTLLoader.js"></script>
+<script src="js/loaders/OBJMTLLoader.js"></script>
+
+<script>
+
+var clock = new THREE.Clock();
+var scene, renderer, camera;
+var controls, keyboard = new KeyboardState();
+
+var toycar;
+
+// state variables of toycar
+var pos = new THREE.Vector3(0,0,0);
+var vel = new THREE.Vector3(0,0,0);
+var angle = 0;
+
+var force = new THREE.Vector3();
+var power = 0;
+
+init();
+animate();
+
+function init()
+{
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0x888888);
+	document.body.appendChild (renderer.domElement);
+
+	scene = new THREE.Scene();
+
+	camera = new THREE.PerspectiveCamera (45, width/height, 1, 10000);
+	camera.position.y = 160;
+	camera.position.z = 400;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+	scene.add (camera);
+
+	var loader = new THREE.OBJMTLLoader();
+	loader.load ('models/toycar.obj', 'models/toycar.mtl', 
+	   function (object) {
+		 toycar = object;
+		 scene.add( toycar );
+	   } );
+
+	// add control here (after the camera is defined)
+	controls = new THREE.OrbitControls (camera, renderer.domElement);
+
+	var gridXZ = new THREE.GridHelper(100, 10);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0xffffff) );
+	scene.add(gridXZ);
+
+	var pointLight = new THREE.PointLight (0xffffff);
+	pointLight.position.set (0,300,200);
+	scene.add (pointLight);
+
+	var ambientLight = new THREE.AmbientLight (0x111111);
+	scene.add(ambientLight);
+	window.addEventListener ('resize', onWindowResize, false);	
+}
+
+
+function animate()
+{
+	var dt = clock.getDelta();
+
+	// euler's method
+	tmp = vel.clone();
+	tmp.multiplyScalar (dt);
+	pos.add (tmp);   // pos += vel*dt
+	
+	tmp = force.clone();
+	tmp.multiplyScalar (dt);
+	vel.add (tmp);   // vel += force*dt
+	
+	if (vel.length() > 0) {
+		angle = Math.atan2 (-vel.z, vel.x);  // update orientation
+	}
+
+	if (toycar != undefined) { 
+		toycar.scale.set (0.2,0.2,0.2);
+		toycar.position.set (pos.x, pos.y, pos.z);
+		toycar.rotation.y = (angle+Math.PI/2);
+	}
+	
+	requestAnimationFrame ( animate );  
+	update();
+	render();  
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+function myclamp(x,lo,hi)
+{
+	if (x < lo) return lo;
+	if (x > hi) return hi;
+	return x;
+}
+
+function update()
+{
+	controls.update();
+	keyboard.update();
+	if (keyboard.pressed("home"))  
+		power = 5.0;               
+	if (keyboard.pressed("space"))  
+		power = 0;               
+	if (keyboard.pressed("up"))  
+		power *= 1.2;        
+	if (keyboard.pressed("down"))  
+		power /= 1.2;    
+	
+	var angle_thrust = angle;
+	if (keyboard.pressed("left"))  
+		angle_thrust += 0.3;        
+	if (keyboard.pressed("right"))  
+		angle_thrust -= 0.3;       
+	
+	power = myclamp (power, 0, 80.0);		
+
+	// force: vel-aligned thrust
+	var force_gas = new THREE.Vector3(1,0,0);
+	force_gas.applyAxisAngle (new THREE.Vector3(0,1,0), angle_thrust);
+	force_gas.multiplyScalar (power);
+
+	// force: vel-against damping
+	force_damp = vel.clone();
+	force_damp.multiplyScalar (-2);
+
+	force.addVectors (force_gas, force_damp);
+}
+
+function render()
+{
+	renderer.render (scene, camera);
+}
+
+
+</script>
+</body>
+
+</html>

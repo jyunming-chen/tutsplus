@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<head>
+<meta charset="UTF-8">
+
+<style>
+strong {font-weight:bold;color:red}
+</style>
+<title>Three.js Minimal Example</title>
+<script src="js/r69/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script>
+
+"use strict";
+
+var renderer, scene, camera
+
+var controls;  // an OrbitControls object for rotating the view.
+var cube;
+var clock = new THREE.Clock();
+var angle = 0;
+var turn = true;
+
+var baseColor = [  // available colors for the base material color
+    0xFFFFFF,
+    0x8888CC,
+    0xCC8888,
+    0x88BB88
+];
+var currentColor = 0xFFFFFF;  // currently selected 
+var button;
+
+function resetRotation()
+{
+	turn = !turn;
+	
+	// change innerHTML:
+	if (turn)
+		button.innerHTML = "Spin <strong>Off</strong>";
+	else
+		button.innerHTML = "Spin <strong/>On";
+}
+
+function render() 
+{
+	var dt = clock.getDelta();
+	
+	var x = 50*Math.cos(angle);
+	var z = 50*Math.sin(angle);
+	cube.position.set (x,0,z);
+
+	if (turn) {
+		cube.rotation.y -= 5*dt;
+		angle -= dt;
+	}
+	
+    controls.update();
+	requestAnimationFrame ( render );  
+    renderer.render(scene, camera);
+}
+
+function createObjbox(geometryType) 
+{
+   // document.getElementById("bttn").focus();  // to prevent key presses from going to the radio buttons
+
+	switch (geometryType) {
+		case 0:
+			cube.geometry = new THREE.BoxGeometry (10,10,10);
+			break;
+		case 1:
+			cube.geometry = new THREE.SphereGeometry(10, 12,12);
+			break;
+		case 2:
+			cube.geometry = new THREE.CylinderGeometry (10,10,10,32);
+			break;
+	}
+
+    render();
+}
+
+function setObjectColor(colorNum) 
+{
+    currentColor = baseColor[colorNum];
+    if (cube) {
+		cube.material = new THREE.MeshLambertMaterial ({color:currentColor});
+        cube.material.needsUpdate = true;
+    }
+
+    render();
+}
+
+function doTransparentCheckbox() 
+{
+    var transparent = document.getElementById("transparentCheck").checked;
+
+	if (transparent) {
+		cube.material.transparent = true;
+		cube.material.opacity = 0.4;
+	} else {
+		cube.material.transparent = false;
+	}
+    render();
+}
+
+function scene_stuff()
+{
+	var cubeGeometry = new THREE.BoxGeometry (10,10,10);
+	var cubeMaterial = new THREE.MeshLambertMaterial ({color: currentColor});
+
+	cube = new THREE.Mesh (cubeGeometry, cubeMaterial);
+	cube.position.set (50, 0, 0);
+	scene.add (cube);
+
+	var skyboxGeometry = new THREE.BoxGeometry (1000,1000,1000);
+	var skyboxMaterial = new THREE.MeshBasicMaterial ({color: 0x888888, side:THREE.BackSide});
+	var skybox = new THREE.Mesh (skyboxGeometry, skyboxMaterial);
+	scene.add (skybox);
+
+	var gridXZ = new THREE.GridHelper(100, 10);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0xffffff) );
+	scene.add(gridXZ);
+
+	var pointLight = new THREE.PointLight (0xffffff);
+	pointLight.position.set (0,300,200);
+	scene.add (pointLight);
+}
+
+/**
+ *  This function is called by the body onload event.
+ */
+function init() {
+    try {
+        var theCanvas = document.getElementById("cnvs");
+		button = document.getElementById ("bttn");
+		
+        if (!theCanvas || !theCanvas.getContext) {
+            document.getElementById("message").innerHTML = 
+                             "Sorry, your browser doesn't support canvas graphics.";
+            return;
+        }
+		
+        try {  // try to create a WebGLRenderer
+            if (window.WebGLRenderingContext) {
+                renderer = new THREE.WebGLRenderer( { 
+                   canvas: theCanvas, 
+                   antialias: true
+                } );
+            } 
+        }
+        catch (e) {
+        }
+        if (!renderer) { // If the WebGLRenderer couldn't be created, give up.
+            document.getElementById("message").innerHTML =
+                          "WebGL is requrid but is not availabl.";
+            return;
+        }
+		
+        scene = new THREE.Scene();
+		scene_stuff();
+		
+		camera = new THREE.PerspectiveCamera (45, theCanvas.width/theCanvas.height, 0.1, 10000);
+		camera.position.y = 160;
+		camera.position.z = 400;
+		camera.lookAt (new THREE.Vector3(0,0,0));
+
+		
+        controls = new THREE.OrbitControls(camera, theCanvas);
+        render();
+
+        document.getElementById("s1").checked = true;
+        document.getElementById("c1").checked = true;
+        document.getElementById("transparentCheck").checked = false;
+     }
+     catch (e) {
+        document.getElementById("message").innerHTML = "Sorry, an error occurred: " + e;
+        alert(e.stack);
+     }
+}
+
+</script>
+
+
+
+</head>
+<body onload="init()">
+
+<h2>Three.js Minimal</h2>
+
+<noscript>
+<p style="color: #A00; font-weight: bold">Sorry, but this page requires JavaScript!</p>
+</noscript>
+
+<p>Using <a href="http://jyunming-chen.github.io/tutsplus/tutsplus1.html">tutsplus1</a> as an example,
+illustate the minimal components to combine threejs canvas with html elements.</p>
+
+<p> This example is motivated by 
+<a href="http://math.hws.edu/eck/cs424/notes2013/threejs/refraction-demo.html">
+this example</a>.
+
+<p style="color:#A00; font-weight: bold; font-size: 120%" id="message">
+Drag on the canvas with left-mouse button to rotate the view.</p>
+
+<p><b>Click the buttons on the right to change the object type and color
+</b></p>
+<hr/>
+
+<div style="float:left">
+   <canvas width=600 height=600 id="cnvs" style="background-color:black"></canvas>    
+</div>
+
+<div style="float:left; margin-left:1.5cm">
+<p style="text-indent:-1cm"><b>Object Type:</b><br>
+    <input type=radio name="pickobjbox" id=s1 onchange="createObjbox(0)"> <label for="s1">Cube</label><br>
+    <input type=radio name="pickobjbox" id=s2 onchange="createObjbox(1)"> <label for="s2">Sphere</label><br>
+    <input type=radio name="pickobjbox" id=s3 onchange="createObjbox(2)"> <label for="s3">Cylinder</label>
+</p>
+<p style="text-indent:-1cm; margin-top:1cm"><b>Object Color:</b><br>
+    <input type=radio name="pickcolor" id=c1 onchange="setObjectColor(0)"> <label for="c1">White</label><br>
+    <input type=radio name="pickcolor" id=c2 onchange="setObjectColor(1)"> <label for="c2">Blue</label><br>
+    <input type=radio name="pickcolor" id=c3 onchange="setObjectColor(2)"> <label for="c3">Pink</label><br>
+    <input type=radio name="pickcolor" id=c4 onchange="setObjectColor(3)"> <label for="c4">Green</label>
+</p>
+<p style="text-indent:-1cm; margin-top:1cm"><input type=checkbox id=transparentCheck onchange="doTransparentCheckbox()">
+           <label for="cloudyCheck">Object is transparent</label.</p>
+<p style="text-indent:-1cm; margin-top:1cm"><button id=bttn onclick="resetRotation()">Spin Off</button>
+</p>
+</div>
+
+<p style="clear:both"> 
+<hr/> End of float left </p>
+
+</body>
+</html>

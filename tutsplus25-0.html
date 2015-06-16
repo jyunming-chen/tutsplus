@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #330000
+	}
+</style>
+</head>
+
+<body> 
+<div id="info">
+webgl tutorial 25 <br/><br/>
+Sketcher
+</div>
+
+<script src="js/r69/three.min.js"></script>
+
+<script>
+
+var scene, renderer, camera;
+var plane, cyl;
+var mouse = new THREE.Vector2();
+
+var myLine;
+var MAX_LINE_POINTS = 100;
+
+var lineGeometry;
+
+var contour = "3 1 1 2 1 3 0";
+
+init();
+animate();
+
+
+function tok (s, chars, rtl) 
+{
+	var n, i = chars.length;
+	rtl = true === rtl;
+	while (i--) {
+		n = s.indexOf (chars[i]);
+		s = n < 0 ? s : rtl
+			? s.substr (++n)
+			: s.substr (0, n);
+	}
+	return s;
+}
+
+function readContour ()
+{
+	var ss = contour;
+	
+	var n = tok (ss, " ");
+
+	ss = tok (ss, " ", true);
+
+	var x, y;
+	x = tok (ss, " "); ss = tok (ss, " ", true);
+	y = tok (ss, " "); ss = tok (ss, " ", true);
+	console.log (x+", " +y);
+	createNewLine (new THREE.Vector3 (x,y,0));
+
+	for (i = 1; i < n; i++) {
+		x = tok (ss, " "); ss = tok (ss, " ", true);
+		y = tok (ss, " "); ss = tok (ss, " ", true);
+//		alert (x + ", " + y);
+	
+		addPoint (new THREE.Vector3 (x,y,0));
+	console.log (x+", " +y);
+	}
+}
+
+
+
+function init()
+{
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0xeeeeee);
+	
+	document.body.appendChild (renderer.domElement);
+	
+	scene = new THREE.Scene();
+
+	camera = new THREE.OrthographicCamera (-15,15,15,-15, 1, 100);
+	camera.position.x = 0;
+	camera.position.y = 0;
+	camera.position.z = 50;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	var gridXZ = new THREE.GridHelper(10, 1);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0x999999) );
+	//gridXZ.material = new THREE.LineDashedMaterial( { color: 0x00cc00, dashSize: 1, gapSize: 1 } );
+	gridXZ.rotation.x = Math.PI/2;
+	scene.add(gridXZ);
+
+	readContour();
+	
+	window.addEventListener ('resize', onWindowResize, false);	
+//	window.addEventListener( 'mousemove', onDocumentMouseMove, false );
+//	window.addEventListener( 'mousedown', onDocumentMouseDown, false );
+
+}
+
+var myLine;
+
+function createNewLine(startingPoint)
+{
+    var geometry = new THREE.Geometry();
+	
+	for (var i = 0; i < MAX_LINE_POINTS; i++) {
+		geometry.vertices.push(startingPoint.clone());
+    }
+
+    myLine =  new THREE.Line(geometry,  new THREE.LineBasicMaterial( { color: 0x222222 } ));
+    // myLine.geometry.dynamic = true; // default
+    scene.add(myLine);
+}
+
+function addPoint(myPoint) 
+{
+    myLine.geometry.vertices.push(myLine.geometry.vertices.shift()); //shift the array
+    myLine.geometry.vertices[MAX_LINE_POINTS-1] = myPoint; //add the point to the end of the array
+    myLine.geometry.verticesNeedUpdate = true;
+}
+
+var nolineyet = true;
+function onDocumentMouseDown (event) {
+	event.preventDefault();
+	// NDC: [-1,1]x[-1,1]
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+	if (event.button === 0) {
+		var myPoint = new THREE.Vector3(mouse.x*15, mouse.y*15,0);
+		if (nolineyet) { 
+			createNewLine (myPoint);
+			nolineyet = false;
+		} else {
+			myLine.geometry.vertices.push(myLine.geometry.vertices.shift()); //shift the array
+			myLine.geometry.vertices[MAX_LINE_POINTS-1] = myPoint; //add the point to the end of the array
+			myLine.geometry.verticesNeedUpdate = true;
+		}
+	} else if (event.button === 1) {
+		console.log ("middle button");
+		nolineyet = true;
+	}
+	
+}
+
+function onDocumentMouseMove( event ) {
+	event.preventDefault();
+	// NDC: [-1,1]x[-1,1]
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+	//console.log (mouse.x + ", " + mouse.y);
+}
+
+function animate()
+{
+	requestAnimationFrame ( animate );  
+	//controls.update();
+	render(); 
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+function render()
+{
+//	console.log (lineGeometry.vertlength);
+	
+	renderer.render (scene, camera);
+}
+</script>
+</body>
+
+</html>

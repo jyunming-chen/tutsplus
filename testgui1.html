@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<title>testgui1 (Three.js)</title>
+	<meta charset="utf-8">
+</head>
+<body>
+
+<script src="js/three.min.js"></script>
+<script src="js/Detector.js"></script>
+
+<script src="js/OrbitControls.js"></script>
+<script src="js/KeyboardState.js"></script>
+
+<script type='text/javascript' src='js/DAT.GUI.min.js'></script>
+
+
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+<script>
+
+var container;
+var scene;
+var camera;
+var controls;
+var renderer;
+var sphere;
+var parameters
+var angle=0;
+var clock = new THREE.Clock();
+
+init();
+animate();
+
+function init() 
+{
+	scene = new THREE.Scene();
+	
+	var screenwidth = window.innerWidth;
+	var screenheight= window.innerHeight;
+	var aspect = screenwidth/screenheight;
+	camera = new THREE.PerspectiveCamera(45,aspect,0.1,10000);
+	camera.position.set(0,150,400);
+	scene.add(camera);
+	camera.lookAt(scene.position);
+	
+	renderer = new THREE.WebGLRenderer( {antialias:true} );
+	renderer.setSize(screenwidth,screenheight);
+	
+	container = document.getElementById( 'ThreeJS' );
+	container.appendChild( renderer.domElement );
+	controls = new THREE.OrbitControls(camera,renderer.domElement);
+	
+	var sphereG = new THREE.SphereGeometry(15,32,16);
+	var sphereM = new THREE.MeshLambertMaterial({color:0xffffff});
+	sphere = new THREE.Mesh(sphereG,sphereM);
+	sphere.position.set(0,15,0);
+	scene.add(sphere);
+	
+	var light = new THREE.PointLight(0xffffff);
+	light.position.set(0,250,0);
+	scene.add(light);
+	var ambientLight = new THREE.AmbientLight(0xff8800);
+	ambientLight.position.set(0,300,0);
+	//scene.add(ambientLight);
+	
+	var floor = new THREE.GridHelper(100,10);
+	floor.setColors( new THREE.Color(0xff0000), new THREE.Color(0x000000) );
+	//floor.position.y = 0;
+	scene.add(floor);
+	
+	var gui = new dat.GUI();
+	 
+	parameters = {
+		x:0, y:15, z:0,
+		color:  "#ff0000",
+		wireframe : false,
+		material : 'Lambert',
+		reset : function() { resetSphere() }
+	};
+	
+	gui.add(parameters,'x',-100,100).step(2).listen(); //-100 min  100 max  step變動的間隔
+ 	gui.add(parameters,'y',-100,100).listen();         // listen(): 當你不用GUI拉動該項的數值 因為外部或其他變動
+	gui.add(parameters,'z',-100,100).listen();	       //改變該數值時 GUI該項會跟著變動
+	
+	/*  這裡是onChange使用方式
+	var sphereX = gui.add(parameters,'x',-100,100).step(2).listen(); 
+	var sphereY = gui.add(parameters,'y',-100,100).listen();         
+	var sphereZ = gui.add(parameters,'z',-100,100).listen();	       
+	
+	sphereX.onChange(function(value) 
+	{   sphere.position.x = value;   });
+	sphereY.onChange(function(value) 
+	{   sphere.position.y = value;   });
+	sphereZ.onChange(function(value) 
+	{   sphere.position.z = value;   });
+	*/
+	gui.addColor(parameters,'color').name('Color').listen();
+	gui.add(parameters,'wireframe').name('Wireframe').listen();
+	gui.add(parameters,'material',['Basic','Lambert']).listen(); 
+	gui.add(parameters,'reset').name('Reset');
+	
+}
+
+function resetSphere()
+{
+	parameters.x = 0;
+	parameters.y = 15;
+	parameters.z = 0;
+	parameters.wireframe = false;
+	parameters.color = "#ff0000";
+	parameters.material = 'Lambert';
+	
+}
+
+function animate() 
+{
+    requestAnimationFrame( animate );
+	render();		
+	update();
+}
+function update()
+{	
+	sphere.position.x =	parameters.x;	//用onChange() 則這行不需要
+	sphere.position.y = parameters.y;	//用onChange() 則這行不需要
+	sphere.position.z = parameters.z;	//用onChange() 則這行不需要
+	
+		
+	if(parameters.material == 'Basic' && parameters.wireframe == true){
+		sphere.material = new THREE.MeshBasicMaterial({ wireframe: true });
+	}
+	if(parameters.material == 'Basic' && parameters.wireframe == false){
+		sphere.material = new THREE.MeshBasicMaterial({ wireframe: false });
+	}
+	if(parameters.material == 'Lambert' && parameters.wireframe == true){
+		sphere.material = new THREE.MeshLambertMaterial({ wireframe: true });	
+	}
+	if(parameters.material == 'Lambert' && parameters.wireframe == false){
+		sphere.material = new THREE.MeshLambertMaterial({ wireframe: false });
+	}
+	sphere.material.color.setHex( parameters.color.replace("#", "0x") );
+	//sphere.material.color.setHex = parameters.color;
+	
+	controls.update();
+}	
+
+function render() 
+{	
+	renderer.render( scene, camera );
+}
+
+</script>
+
+</body>
+</html>

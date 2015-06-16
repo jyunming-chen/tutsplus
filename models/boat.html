@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+   <link href="favicon.ico" rel="icon" type="image/x-icon" />
+   <title>A3dsViewer WebGL - boat</title>
+	<style>
+         body {
+            margin: 0px;
+            background-color: 0x000000;
+            overflow: hidden;
+         }
+	</style>
+</head>
+<body>
+   <script src="../js/three.min.js"></script>
+   <script src="TrackballControls.js"></script>
+   <script src="boat_0.js"></script>
+   <script src="boat_1.js"></script>
+   <script src="boat_2.js"></script>
+   <script src="boat_3.js"></script>
+   <script src="boat_4.js"></script>
+   <script src="boat_5.js"></script>
+   <script src="boat_6.js"></script>
+   <script src="boat_7.js"></script>
+   <script src="boat_8.js"></script>
+   <script>
+      var camera, scene, renderer;
+      var light;
+      var controls;
+
+	  var group = new THREE.Object3D();
+      init();
+      animate();
+
+	  function loadBoat()
+	  {
+         create_geometry_0(group);
+         create_geometry_1(group);
+         create_geometry_2(group);
+         create_geometry_3(group);
+         create_geometry_4(group);
+         create_geometry_5(group);
+         create_geometry_6(group);
+         create_geometry_7(group);
+         create_geometry_8(group);
+
+	   group.scale.set (0.2,0.2,0.2);
+	   scene.add (group);
+	  
+	  }
+	  
+      function init() {
+
+         renderer = new THREE.WebGLRenderer();
+         renderer.setSize(window.innerWidth, window.innerHeight);
+         document.body.appendChild(renderer.domElement);
+         renderer.setClearColor(0x888888, 1);
+
+         camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 42.917,  6008.447);
+         camera.position.x = 143.058;
+         camera.position.y = -114.651;
+         camera.position.z = 95.301;
+         camera.up = new THREE.Vector3(0, 0, 1);
+         var target = new THREE.Vector3(0.000, 0.000, 0.000);
+         camera.lookAt(target);
+
+         controls = new THREE.TrackballControls(camera);
+         controls.addEventListener( 'change', render);
+
+         scene = new THREE.Scene();
+
+         light = new THREE.PointLight(0x999999);
+         light.position.set(85.835, -114.447, 171.670);
+         scene.add(light);
+         light = new THREE.PointLight(0x4C4C4C);
+         light.position.set(-114.447, -114.447, 85.835);
+         scene.add(light);
+         light = new THREE.PointLight(0x4C4C4C);
+         light.position.set(0.000, 114.447, 114.447);
+         scene.add(light);
+
+		 loadBoat();
+		 /*
+		 group = new THREE.Object3D();
+
+         create_geometry_0(group);
+         create_geometry_1(group);
+         create_geometry_2(group);
+         create_geometry_3(group);
+         create_geometry_4(group);
+         create_geometry_5(group);
+         create_geometry_6(group);
+         create_geometry_7(group);
+         create_geometry_8(group);
+
+	   group.scale.set (0.2,0.2,0.2);
+	   scene.add (group);
+*/  
+  window.addEventListener('resize', onWindowResize, false);
+      }
+
+      function onWindowResize() {
+
+         camera.aspect = window.innerWidth / window.innerHeight;
+         camera.updateProjectionMatrix();
+
+         renderer.setSize(window.innerWidth, window.innerHeight);
+
+         controls.handleResize();
+         render();
+      }
+
+      function animate()
+      {
+         requestAnimationFrame(animate);
+         renderer.render(scene, camera);
+         controls.update();
+      }
+
+      function render()
+      {
+         renderer.render(scene, camera);
+      }
+</script>
+</body>
+</html>

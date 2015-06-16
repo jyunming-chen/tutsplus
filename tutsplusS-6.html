@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #ffff00
+	}
+	a {color: yellow}
+	strong {color:red}
+</style>
+</head>
+
+<body>
+<div id="container"></div>
+<div id="info">
+	webgl tutorial S-6<br/><br/>
+	Area Light with Deferred Renderer<br/>
+	<a href="http://threejs.org/examples/webgldeferred_arealights.html">Reference</a>	
+</div>
+<script src="js/r69/three.min.js"></script>
+
+
+<!--Deferred Renderer Libs-->
+<script src="http://threejs.org/examples/js/renderers/WebGLDeferredRenderer.js"></script>
+<script src="http://threejs.org/examples/js/ShaderDeferred.js"></script>
+<script src="http://threejs.org/examples/js/shaders/CopyShader.js"></script>
+<script src="http://threejs.org/examples/js/shaders/FXAAShader.js"></script>
+<script src="http://threejs.org/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="http://threejs.org/examples/js/postprocessing/RenderPass.js"></script>
+<script src="http://threejs.org/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="http://threejs.org/examples/js/postprocessing/MaskPass.js"></script>
+
+
+<script src="js/OrbitControls.js"></script>
+
+<script>
+
+	var SCALE = 1;
+	var NEAR = 1.0, FAR = 350.0;
+	var VIEW_ANGLE = 45;
+	var WIDTH = window.innerWidth;
+	var HEIGHT = window.innerHeight;
+	var scene;
+	var controls;
+
+init();
+animate();
+
+function init(){
+	renderer = new THREE.WebGLDeferredRenderer( { width: WIDTH, height: HEIGHT, scale: SCALE, 
+				antialias: true, tonemapping: THREE.FilmicOperator, brightness: 2.5 } );
+
+	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, WIDTH / HEIGHT, NEAR, FAR );
+	//camera.position.set(0,0,130);
+	camera.position.set (0, -60, 10);
+	camera.lookAt (new THREE.Vector3(0,0,0));
+	//camera.up.set ();
+	
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+	scene = new THREE.Scene();
+	//scene.add( camera );
+
+	initPointLights();
+	initAreaLights();
+
+	initObjects();
+
+	var container = document.getElementById( 'container' );
+	container.appendChild( renderer.domElement );
+
+	window.addEventListener ('resize', onWindowResize, false);	
+}
+
+function onWindowResize()
+{
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+	camera.aspect = width / height;
+	camera.updateProjectionMatrix();
+	renderer.setSize (width, height);
+}
+
+function initPointLights() {
+	var distance = 20;
+	var light = new THREE.PointLight( 0x00ffff, 1.5, 1.5 * distance );
+	//light.position.z = 30;
+	scene.add( light );
+
+	var geometry = new THREE.SphereGeometry( 0.7, 7, 7 );
+	var material = new THREE.MeshBasicMaterial();
+	material.color = light.color;
+	var emitter = new THREE.Mesh( geometry, material );
+
+	light.add( emitter );
+}
+
+function initAreaLights() {
+
+	var areaLight1 = new THREE.AreaLight( 0xff0000, 1 );
+	areaLight1.position.set( -19.0001, 3.0001, 0.0001 );
+	areaLight1.rotation.set(0, 0, 1.5707 );
+	areaLight1.width = 8;
+	areaLight1.height = 1;
+	scene.add( areaLight1 );
+
+	var meshEmitter = createAreaEmitter( areaLight1 );
+	areaLight1.add( meshEmitter );
+}
+
+function createAreaEmitter( light ) {
+
+	var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+	var material = new THREE.MeshBasicMaterial( { color: light.color.getHex() , vertexColors: THREE.FaceColors } );
+	// how important is to add vertexColors ...
+	
+	var backColor = 0x222222;
+
+	geometry.faces[ 5 ].color.setHex( backColor );
+	geometry.faces[ 4 ].color.setHex( backColor );
+	geometry.faces[ 2 ].color.setHex( backColor );
+	geometry.faces[ 1 ].color.setHex( backColor );
+	geometry.faces[ 0 ].color.setHex( backColor );
+
+	var emitter = new THREE.Mesh( geometry, material );
+	emitter.scale.set( light.width * 2, 0.2, light.height * 2 );
+
+	return emitter;
+}
+
+
+function generateBox() {
+
+	var mapHeight2 = THREE.ImageUtils.loadTexture( "images/plaster.jpg" );
+	mapHeight2.repeat.set( 3, 1.5 );
+	mapHeight2.wrapS = mapHeight2.wrapT = THREE.RepeatWrapping;
+	mapHeight2.anisotropy = 4;
+	mapHeight2.format = THREE.RGBFormat;
+
+	//var object = new THREE.Object3D();
+	var geoPlane = new THREE.PlaneBufferGeometry( 40, 20 );
+	var matPlane  = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x111111, shininess:  50, bumpMap: mapHeight2, bumpScale: 0.5 } );
+
+	var mesh = new THREE.Mesh( geoPlane, matPlane );
+	mesh.position.z = -4;
+	mesh.position.y = 0;
+
+	return mesh;
+}
+
+
+function initObjects() {
+	// create box
+	var box = generateBox();
+	box.scale.multiplyScalar( 8 );
+	scene.add( box );
+}
+
+function animate() {
+	requestAnimationFrame( animate );
+	controls.update();
+	render();
+}
+
+function render() {
+	renderer.render( scene, camera );
+}
+
+</script>
+</body>
+
+</html>
