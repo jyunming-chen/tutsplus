@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+	body {
+		background-color: #fff;
+		color: #111;
+		margin: 0px;
+		overflow: hidden;
+		font-family: Monospace;
+		font-size: 20px;
+		position: absolute;
+	}
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		
+		padding: 5px;
+		text-align: center;
+		color: #ffff00
+	}
+</style>
+</head>
+
+<body> 
+<div id="info">
+webgl tutorial 19-1 <br/><br/>
+XZ Tracer
+</div>
+
+<script src="js/r69/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+
+<script>
+var scene, renderer, camera;
+var controls;
+var plane, cyl;
+var mouse = new THREE.Vector2();
+
+init();
+animate();
+
+function init()
+{
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0x777777);
+	
+	document.body.appendChild (renderer.domElement);
+	
+	scene = new THREE.Scene();
+
+	// picking problem comes from far/near ratio too big (was 0.1, 100000000)
+	camera = new THREE.PerspectiveCamera (45, width/height, 1, 10000);
+	camera.position.x = 0;
+	camera.position.y = 80;
+	camera.position.z = 200;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	var cyl_geom = new THREE.CylinderGeometry (10,10,6,32);
+	var cyl_mat = new THREE.MeshLambertMaterial ({color: 0xff2211});
+	cyl = new THREE.Mesh (cyl_geom, cyl_mat);
+	cyl.position.set (-20,0,20);
+	cyl.name = "leftB";
+	scene.add (cyl);
+
+	// add control here (after the camera is defined)
+	controls = new THREE.OrbitControls (camera, renderer.domElement);
+	
+	var gridXZ = new THREE.GridHelper(100, 20);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0xffffff) );
+	gridXZ.position.set (0,0,0); 
+	scene.add(gridXZ);
+
+	// build an invisible plane, overlapping the grid
+	plane = new THREE.Mesh(
+		new THREE.PlaneBufferGeometry( 200, 200, 8, 8 ),
+		new THREE.MeshBasicMaterial( { color: 0xff0000, opacity: 0.25, transparent: true } )
+	);
+	plane.rotation.x = -Math.PI/2;
+	plane.visible = false;   // invisible, for picking only
+	scene.add( plane );
+
+	var pointLight = new THREE.PointLight (0xffffff);
+	pointLight.position.set (0,300,200);
+	scene.add (pointLight);
+
+	var ambientLight = new THREE.AmbientLight (0x111111);
+	scene.add(ambientLight);
+	
+	window.addEventListener ('resize', onWindowResize, false);	
+	window.addEventListener( 'mousemove', onDocumentM
+	
+	ouseMove, false );
+
+}
+
+function onDocumentMouseMove( event ) {
+	event.preventDefault();
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+	
+	var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
+	var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+	var intersects = raycaster.intersectObject( plane );
+	if (intersects.length > 0) {
+		var move = intersects[0].point.clone();
+		cyl.position.copy (move);
+	}
+}
+
+function animate()
+{
+	requestAnimationFrame ( animate );  
+	controls.update();
+	render(); 
+}
+
+function onWindowResize()
+{
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize (window.innerWidth, window.innerHeight);
+}
+
+function render()
+{
+	renderer.render (scene, camera);
+}
+</script>
+</body>
+
+</html>
