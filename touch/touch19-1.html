@@ -28,14 +28,16 @@ webgl tutorial 19-1 <br/><br/>
 XZ Tracer
 </div>
 
-<script src="js/r69/three.min.js"></script>
-<script src="js/OrbitControls.js"></script>
+<script src="../js/r69/three.min.js"></script>
+<script src="../js/OrbitControls.js"></script>
 
 <script>
 var scene, renderer, camera;
 var controls;
 var plane, cyl;
 var mouse = new THREE.Vector2();
+var mouseX, mouseY;
+var windowHalfX, windowHalfY;
 
 init();
 animate();
@@ -44,7 +46,9 @@ function init()
 {
 	var width = window.innerWidth;
 	var height = window.innerHeight;
-
+	windowHalfX = width/2;
+	windowHalfY = height/2;
+	
 	renderer = new THREE.WebGLRenderer({antialias: true});
 	renderer.setSize (width, height);
 	renderer.setClearColor (0x777777);
@@ -92,10 +96,30 @@ function init()
 	scene.add(ambientLight);
 	
 	window.addEventListener ('resize', onWindowResize, false);	
-	window.addEventListener( 'mousemove', onDocumentM
-	
-	ouseMove, false );
+	window.addEventListener( 'mousemove', onDocumentMouseMove, false );
+    
+	// for iPad, iphone, ... those with touch screen
+    document.addEventListener('touchstart', onDocumentTouchStart, false);
+}
+function onDocumentTouchStart(event) {
 
+    if (event.touches.length == 1) {
+        event.preventDefault();
+        //mouseX = event.touches[0].pageX - windowHalfX;
+        //mouseY = event.touches[0].pageY - windowHalfY;
+		//console.log (event.touches[0].pageX + ', ' + event.touches[0].pageY);
+		mouse.x = ( event.touches[0].pageX / window.innerWidth ) * 2 - 1;
+		mouse.y = - ( event.touches[0].pageY / window.innerHeight ) * 2 + 1;
+	
+		var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
+		var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+		var intersects = raycaster.intersectObject( plane );
+		if (intersects.length > 0) {
+			var move = intersects[0].point.clone();
+			cyl.position.copy (move);
+		}
+	}
 }
 
 function onDocumentMouseMove( event ) {
@@ -122,6 +146,8 @@ function animate()
 
 function onWindowResize()
 {
+	windowHalfX = window.innerWidth/2;
+	windowHalfY = window.innerHeight/2;
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
 	renderer.setSize (window.innerWidth, window.innerHeight);
