@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+
+
+</style>
+</head>
+
+<body> 
+<h1 style="text-align:center"> HTML, Three.JS, jQuery </h1>
+
+<hr>
+<div id="canvas" style="float:left; 
+margin:3px; width:60vw; height:60vw"></div>
+<div style="float:left; margin-left: 10px; width:32vw;">
+    <br/>
+    <button id="ssave" style="width:100%; margin: 10px">Save</button> 
+    <button id="restore" style="width:100%; margin: 10px">Restore</button>
+    <button id="clear" style="width:100%; margin: 10px">Clear</button>
+</div>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+
+<script src="lineUtil.js"></script>
+
+<script>
+var scene, renderer, camera;
+var mouse = new THREE.Vector2();
+var width = $("#canvas").innerWidth();
+var height = $("#canvas").innerHeight();
+
+var myLine;
+var mouseDown = false;
+
+init();
+animate();
+
+function init()
+{
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize (width, height);
+	renderer.setClearColor (0xeeeeee);
+	
+	$("#canvas").append (renderer.domElement);
+	
+	scene = new THREE.Scene();
+
+	camera = new THREE.OrthographicCamera (-15,15,15,-15, 1, 100);
+	camera.position.x = 0;
+	camera.position.y = 0;
+	camera.position.z = 50;
+	camera.lookAt (new THREE.Vector3(0,0,0));
+
+	var gridXZ = new THREE.GridHelper(10, 1);
+	gridXZ.setColors( new THREE.Color(0xff0000), new THREE.Color(0x999999) );
+	//gridXZ.material = new THREE.LineDashedMaterial( { color: 0x00cc00, dashSize: 1, gapSize: 1 } );
+	gridXZ.rotation.x = Math.PI/2;
+	scene.add(gridXZ);
+	
+	window.addEventListener ('resize', onWindowResize, false);	
+	window.addEventListener( 'mousemove', onDocumentMouseMove, false );
+	window.addEventListener( 'mouseup', onDocumentMouseUp, false );
+	window.addEventListener( 'mousedown', onDocumentMouseDown, false );
+	
+	// for iPad, iphone, ... those with touch screen
+    document.addEventListener('touchstart', onDocumentTouchStart, false);
+    document.addEventListener('touchend', onDocumentTouchEnd, false);
+    document.addEventListener('touchmove', onDocumentTouchMove, false);
+}
+
+/////////////////////////////////////////////////////////////////////////
+function onDocumentTouchStart (event) {
+	var touches = event.touches;
+	console.log (touches.length + " touches");
+	
+	if (event.touches.length == 1) {
+		event.preventDefault();
+		// NDC: [-1,1]x[-1,1]
+		mouse.x = ( event.touches[0].pageX / width ) * 2 - 1;
+		mouse.y = - ( event.touches[0].pageY / height ) * 2 + 1;
+
+		mouseDown = true;
+		var myPoint = new THREE.Vector3(mouse.x*15, mouse.y*15,0);
+		myLine = createNewLine (myPoint);
+		scene.add (myLine);
+	}
+}
+
+function onDocumentTouchEnd (event) {
+	var touches = event.touches;
+	mouseDown = false;
+}
+
+function onDocumentTouchMove( event ) {
+//	console.log (event.touches.length + " touches");
+	if (mouseDown) {
+		event.preventDefault();
+		console.log ("in TouchMove");
+		// NDC: [-1,1]x[-1,1]
+		mouse.x = ( event.touches[0].pageX / width ) * 2 - 1;
+		mouse.y = - ( event.touches[0].pageY / height ) * 2 + 1;
+
+		//console.log (mouse.x + ", " + mouse.y);
+		var myPoint = new THREE.Vector3(mouse.x*15, mouse.y*15,0);
+		addPoint (myPoint);
+		++npoints;
+		npoints = npoints > MAX_LINE_POINTS ? MAX_LINE_POINTS : npoints;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+function onDocumentMouseDown (event) {
+	if (myLine) {
+		scene.remove (myLine);
+	}
+	event.preventDefault();
+	// NDC: [-1,1]x[-1,1]
+	mouse.x = ( (event.clientX - event.target.offsetLeft) / width ) * 2 - 1;
+	mouse.y = - ( (event.clientY - event.target.offsetTop) / height ) * 2 + 1;
+	//mouse.x = ( event.clientX / width ) * 2 - 1;
+	//mouse.y = - ( event.clientY / height ) * 2 + 1;
+
+	if (event.button === 0) {  // left button
+		mouseDown = true;
+		var myPoint = new THREE.Vector3(mouse.x*15, mouse.y*15,0);
+		myLine = createNewLine (myPoint);
+		scene.add (myLine);
+	}
+}
+
+function onDocumentMouseUp (event) {
+	if (event.button === 0) {  // left button
+		event.preventDefault();
+		mouseDown = false;
+	}
+}
+
+function onDocumentMouseMove( event ) {
+	if (mouseDown) {
+		event.preventDefault();
+		// NDC: [-1,1]x[-1,1]
+		mouse.x = ( (event.clientX - event.target.offsetLeft) / width ) * 2 - 1;
+		mouse.y = - ( (event.clientY - event.target.offsetTop) / height ) * 2 + 1;
+		//mouse.x = ( event.clientX / width ) * 2 - 1;
+		//mouse.y = - ( event.clientY / height ) * 2 + 1;
+
+	//	console.log (mouse.x + ", " + mouse.y);
+		var myPoint = new THREE.Vector3(mouse.x*15, mouse.y*15,0);
+		addPoint (myPoint);
+		++npoints;
+		npoints = npoints > MAX_LINE_POINTS ? MAX_LINE_POINTS : npoints;
+	}
+}
+/*
+$("#clear").click (function() {
+console.log ("in clear");
+	clearLine(); 
+});
+
+$("#restore").click (function() {
+console.log ("in restore");
+	var ss = localStorage.getItem ("myContour");	
+	myLine = readContour2(ss);
+});
+
+$("#ssave").click (function() {
+console.log ("in save");
+//	var string = outputContour2();
+	//console.log (string);
+//	localStorage.setItem ("myContour", string);
+});
+*/
+function animate()
+{
+	requestAnimationFrame ( animate );  
+	render(); 
+}
+
+function onWindowResize()
+{
+	width = $("#canvas").innerWidth();
+	height = $("#canvas").innerHeight();
+
+	camera.aspect = width/height;
+	camera.updateProjectionMatrix();
+	renderer.setSize (width, height);
+}
+
+function render()
+{
+	console.log ("Scene has: " + scene.children.length);
+	
+	renderer.render (scene, camera);
+}
+</script>
+
+</body>
+
+</html>
