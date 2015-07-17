@@ -76,6 +76,7 @@ function init()
 	$("#canvas").mouseup (onDocumentMouseUp);
 
 	// for iPad, iphone, ... those with touch screen
+
 	$("#canvas").on ("touchstart", onDocumentTouchStart);
 	$("#canvas").on ("touchend", onDocumentTouchEnd);
 	$("#canvas").on ("touchmove", onDocumentTouchMove);
@@ -88,9 +89,14 @@ function init()
 }
 
 /////////////////////////////////////////////////////////////////////////
-function onDocumentTouchStart (event) {
+function onDocumentTouchStart (ev) {
+console.log ("in touchstart");
+var event = ev.originalEvent;  // for jQuery codes
 	var touches = event.touches;
 	console.log (touches.length + " touches");
+	if (myLine) {
+		scene.remove (myLine);
+	}
 	
 	if (event.touches.length == 1) {
 		event.preventDefault();
@@ -107,13 +113,16 @@ function onDocumentTouchStart (event) {
 	}
 }
 
-function onDocumentTouchEnd (event) {
+function onDocumentTouchEnd (ev) {
+var event = ev.originalEvent;
 	var touches = event.touches;
 	mouseDown = false;
 }
 
-function onDocumentTouchMove( event ) {
+function onDocumentTouchMove( ev ) {
+console.log ("in touchmove");
 //	console.log (event.touches.length + " touches");
+var event = ev.originalEvent;  // for jQuery
 	if (mouseDown) {
 		event.preventDefault();
 		console.log ("in TouchMove");
@@ -134,7 +143,7 @@ function onDocumentTouchMove( event ) {
 ///////////////////////////////////////////////////////////////////////////////
 
 function onDocumentMouseDown (event) {
-console.log ("in mouse down");
+console.log ("in mousedown");
 	if (myLine) {
 		scene.remove (myLine);
 	}
@@ -162,6 +171,7 @@ function onDocumentMouseUp (event) {
 
 function onDocumentMouseMove( event ) {
 	if (mouseDown) {
+console.log ("in mousemove");
 		event.preventDefault();
 		// NDC: [-1,1]x[-1,1]
 		mouse.x = ( (event.clientX - event.target.offsetLeft) / width ) * 2 - 1;
@@ -190,6 +200,21 @@ console.log ("in restore");
 
 $("#save").click (function() {
 console.log ("in save");
+	var string = outputContour2();
+	localStorage.setItem ("myContour", string);
+});
+////============================== ////
+$("#clear").on ("touchend", function() {
+console.log ("in touch-clear");
+	clearLine(); 
+});
+$("#restore").on ("touchend", function() {
+console.log ("in touch-restore");
+	var ss = localStorage.getItem ("myContour");	
+	myLine = readContour2(ss);
+});
+$("#save").on ("touchend", function() {
+	console.log ("in touch-save");
 	var string = outputContour2();
 	localStorage.setItem ("myContour", string);
 });

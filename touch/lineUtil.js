@@ -35,7 +35,9 @@ function readContour2 (ss) {
 	}
 	var lineMaterial = new THREE.LineBasicMaterial( { color: 0x00cc00 } );
 
-	scene.add (new THREE.Line( lineGeometry, lineMaterial ));
+	var newline = new THREE.Line( lineGeometry, lineMaterial );
+	scene.add (newline);
+	return newline;
 }
 
 /////////////////////////////////////////////////
