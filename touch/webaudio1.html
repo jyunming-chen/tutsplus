@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+div {
+    margin-top: 5em;
+}
+#container {
+    width:60vw;
+    height: 60vw;
+    float:left;
+    background-color:pink;
+    margin: 10px;
+}
+
+</style>
+</head>
+
+<body> 
+<div>
+    <button id='play' style="display: block">Play</button>
+</div>
+<hr>
+<div id="container">
+    <canvas id="cnvs"></canvas>
+</div>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js">
+    
+</script>
+<script src='https://jyunming-chen.github.io/WebAudio/js/shared.js'></script>
+
+<script>
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////
+var RhythmSample = function () {
+    loadSounds(this, {
+        kick: 'https://jyunming-chen.github.io/WebAudio/kick.wav',
+        snare: 'https://jyunming-chen.github.io/WebAudio/snare.wav',
+        hihat: 'https://jyunming-chen.github.io/WebAudio/hihat.wav'
+    });
+};
+
+RhythmSample.prototype.play = function () {
+    // We'll start playing the rhythm 100 milliseconds from "now"
+    var startTime = context.currentTime + 0.100;
+    var tempo = 120; // BPM (beats per minute)
+    var eighthNoteTime = (60 / tempo) / 2;
+
+    // Play 2 bars of the following:
+    for (var bar = 0; bar < 12; bar++) {
+        var time = startTime + bar * 8 * eighthNoteTime;
+        // Play the bass (kick) drum on beats 1, 5
+        playSound(this.kick, time);
+        playSound(this.kick, time + 4 * eighthNoteTime);
+
+        // Play the snare drum on beats 3, 7
+        playSound(this.snare, time + 2 * eighthNoteTime);
+        playSound(this.snare, time + 6 * eighthNoteTime);
+
+        // Play the hi-hat every eighthh note.
+        for (var i = 0; i < 8; ++i) {
+            playSound(this.hihat, time + i * eighthNoteTime);
+        }
+    }
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////
+var sample = new RhythmSample();
+/*
+document.querySelector('button').addEventListener('click', function () {
+    sample.play();
+});
+*/
+$('#play').click (function() {
+    sample.play();
+});
+// for touch devices
+$("#play").on ("touchend", function() {
+    sample.play();
+});
+
+///////////////////////////////////////////////////////////////////////////////////
+var clock = new THREE.Clock();
+var scene, renderer, camera;
+var plane, cyl, cyl2;
+var theCanvasFrame;
+
+init();
+animate();
+
+function init() {
+    var theCanvas = document.getElementById("cnvs");
+    theCanvasFrame = document.getElementById("container");
+
+    renderer = new THREE.WebGLRenderer({
+        canvas: theCanvas,
+        antialias: true
+    });
+    var ww = theCanvasFrame.clientWidth;
+    var hh = theCanvasFrame.clientHeight;
+    renderer.setSize(ww, hh);
+    renderer.setClearColor(0x555555);
+
+    scene = new THREE.Scene();
+
+    camera = new THREE.PerspectiveCamera(45, ww / hh, 1, 10000);
+    camera.position.x = 0;
+    camera.position.y = 80;
+    camera.position.z = 200;
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+    var cyl_geom = new THREE.CylinderGeometry(10, 10, 6, 32);
+    var cyl_mat = new THREE.MeshLambertMaterial({
+        color: 0xff2211
+    });
+    cyl = new THREE.Mesh(cyl_geom, cyl_mat);
+    cyl.position.set(-40, 0, 0);
+    scene.add(cyl);
+
+    cyl2 = cyl.clone();
+    cyl2.material = new THREE.MeshLambertMaterial({
+        color: 0x00ff00
+    });
+    cyl2.position.set(40, 0, 0);
+    scene.add(cyl2);
+
+    var gridXZ = new THREE.GridHelper(100, 20);
+    gridXZ.setColors(new THREE.Color(0xff0000), new THREE.Color(0xffffff));
+    gridXZ.position.set(0, 0, 0);
+    scene.add(gridXZ);
+
+    // build an invisible plane, overlapping the grid
+    plane = new THREE.Mesh(
+    new THREE.PlaneBufferGeometry(200, 200, 8, 8),
+    new THREE.MeshBasicMaterial({
+        color: 0xff0000,
+        opacity: 0.25,
+        transparent: true
+    }));
+    plane.rotation.x = -Math.PI / 2;
+    plane.visible = false; // invisible, for picking only
+    scene.add(plane);
+
+    var pointLight = new THREE.PointLight(0xffffff);
+    pointLight.position.set(0, 300, 200);
+    scene.add(pointLight);
+
+    var ambientLight = new THREE.AmbientLight(0x111111);
+    scene.add(ambientLight);
+
+    window.addEventListener('resize', onWindowResize, false);
+}
+
+function onWindowResize() {
+    var ww = theCanvasFrame.clientWidth;
+    var hh = theCanvasFrame.clientHeight;
+    camera.aspect = ww / hh;
+    camera.updateProjectionMatrix();
+    renderer.setSize(ww, hh);
+}
+
+function animate() {
+    var elapsed = clock.getElapsedTime();
+    if (elapsed % 1.0 < 0.5) {
+        cyl.visible = false;
+    } else {
+        cyl.visible = true;
+    }
+    cyl2.visible = !cyl.visible;
+    requestAnimationFrame(animate);
+    render();
+}
+
+function render() {
+    renderer.render(scene, camera);
+}
+</script>
+</body>
+
+</html>
