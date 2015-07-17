@@ -10,20 +10,17 @@
 </head>
 
 <body> 
-<h1 style="text-align:center"> HTML, Three.JS, jQuery </h1>
+<h1 style="text-align:center"> Draw ONE Line </h1>
 
 <hr>
-<div id="canvas" style="float:left; 
-margin:3px; width:60vw; height:60vw"></div>
+<div id="canvas" style="float:left; margin:3px; width:60vw; height:60vw"></div>
 <div style="float:left; margin-left: 10px; width:32vw;">
-    <br/>
-    <button id="ssave" style="width:100%; margin: 10px">Save</button> 
-    <button id="restore" style="width:100%; margin: 10px">Restore</button>
-    <button id="clear" style="width:100%; margin: 10px">Clear</button>
+    <button id="save" style="width:100%; margin: 10px">Save</button> 
+    <button id="restore" style="width:100%; margin: 10px">Restore</button> 
+    <button id="clear" style="width:100%; margin: 10px">Clear</button> 
 </div>
 <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
-<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
 
 <script src="lineUtil.js"></script>
 
@@ -61,15 +58,33 @@ function init()
 	gridXZ.rotation.x = Math.PI/2;
 	scene.add(gridXZ);
 	
+	// Event listeners
+	// ref: https://api.jquery.com/category/events/
 	window.addEventListener ('resize', onWindowResize, false);	
+/*	
 	window.addEventListener( 'mousemove', onDocumentMouseMove, false );
 	window.addEventListener( 'mouseup', onDocumentMouseUp, false );
 	window.addEventListener( 'mousedown', onDocumentMouseDown, false );
-	
+*/	
+	// three ways to associate event listener to an element
+	// 1. document.getElementById("canvas").addEventListener( 'mousedown', onDocumentMouseDown, false );
+	// 2. $("#canvas").mousedown (onDocumentMouseDown);
+	// 3. $("#canvas").on ("mousedown", onDocumentMouseDown);
+
+	$("#canvas").mousedown (onDocumentMouseDown);
+	$("#canvas").mousemove (onDocumentMouseMove);
+	$("#canvas").mouseup (onDocumentMouseUp);
+
 	// for iPad, iphone, ... those with touch screen
-    document.addEventListener('touchstart', onDocumentTouchStart, false);
-    document.addEventListener('touchend', onDocumentTouchEnd, false);
+	$("#canvas").on ("touchstart", onDocumentTouchStart);
+	$("#canvas").on ("touchend", onDocumentTouchEnd);
+	$("#canvas").on ("touchmove", onDocumentTouchMove);
+/*
+	document.addEventListener('touchstart', onDocumentTouchStart, false);
+	document.addEventListener('touchend', onDocumentTouchEnd, false);
     document.addEventListener('touchmove', onDocumentTouchMove, false);
+*/
+	
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -80,8 +95,10 @@ function onDocumentTouchStart (event) {
 	if (event.touches.length == 1) {
 		event.preventDefault();
 		// NDC: [-1,1]x[-1,1]
-		mouse.x = ( event.touches[0].pageX / width ) * 2 - 1;
-		mouse.y = - ( event.touches[0].pageY / height ) * 2 + 1;
+		mouse.x = ( (event.touches[0].pageX - event.target.offsetLeft) / width ) * 2 - 1;
+		mouse.y = - ( (event.touches[0].pageY - event.target.offsetTop) / height ) * 2 + 1;
+		//mouse.x = ( event.touches[0].pageX / width ) * 2 - 1;
+		//mouse.y = - ( event.touches[0].pageY / height ) * 2 + 1;
 
 		mouseDown = true;
 		var myPoint = new THREE.Vector3(mouse.x*15, mouse.y*15,0);
@@ -101,8 +118,10 @@ function onDocumentTouchMove( event ) {
 		event.preventDefault();
 		console.log ("in TouchMove");
 		// NDC: [-1,1]x[-1,1]
-		mouse.x = ( event.touches[0].pageX / width ) * 2 - 1;
-		mouse.y = - ( event.touches[0].pageY / height ) * 2 + 1;
+		mouse.x = ( (event.touches[0].pageX - event.target.offsetLeft) / width ) * 2 - 1;
+		mouse.y = - ( (event.touches[0].pageY - event.target.offsetTop) / height ) * 2 + 1;
+		//mouse.x = ( event.touches[0].pageX / width ) * 2 - 1;
+		//mouse.y = - ( event.touches[0].pageY / height ) * 2 + 1;
 
 		//console.log (mouse.x + ", " + mouse.y);
 		var myPoint = new THREE.Vector3(mouse.x*15, mouse.y*15,0);
@@ -115,6 +134,7 @@ function onDocumentTouchMove( event ) {
 ///////////////////////////////////////////////////////////////////////////////
 
 function onDocumentMouseDown (event) {
+console.log ("in mouse down");
 	if (myLine) {
 		scene.remove (myLine);
 	}
@@ -149,14 +169,14 @@ function onDocumentMouseMove( event ) {
 		//mouse.x = ( event.clientX / width ) * 2 - 1;
 		//mouse.y = - ( event.clientY / height ) * 2 + 1;
 
-	//	console.log (mouse.x + ", " + mouse.y);
 		var myPoint = new THREE.Vector3(mouse.x*15, mouse.y*15,0);
 		addPoint (myPoint);
 		++npoints;
 		npoints = npoints > MAX_LINE_POINTS ? MAX_LINE_POINTS : npoints;
 	}
 }
-/*
+
+//////////////////////////////////////////////////////////////////////////////////////
 $("#clear").click (function() {
 console.log ("in clear");
 	clearLine(); 
@@ -168,13 +188,12 @@ console.log ("in restore");
 	myLine = readContour2(ss);
 });
 
-$("#ssave").click (function() {
+$("#save").click (function() {
 console.log ("in save");
-//	var string = outputContour2();
-	//console.log (string);
-//	localStorage.setItem ("myContour", string);
+	var string = outputContour2();
+	localStorage.setItem ("myContour", string);
 });
-*/
+
 function animate()
 {
 	requestAnimationFrame ( animate );  
