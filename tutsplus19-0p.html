@@ -28,7 +28,7 @@
 
 <div id="container"></div>
 <div id="info">
-    webgl tutorial 19-0 <br/><br/>
+    webgl tutorial 19-0p <br/><br/>
 	Picking
 	<br/><br/>
 </div>
@@ -49,6 +49,8 @@ var mouse = new THREE.Vector2();
 var left_box, right_box;
 var angle_l = 0, angle_r = 0;
 var spin_l = false, spin_r = false;
+
+var pickables = [];
 
 init();
 animate();
@@ -112,6 +114,9 @@ function init()
 	
 	window.addEventListener ('resize', onWindowResize, false);	
 
+	pickables.push (left_box);
+	pickables.push (right_box);
+	
 	raycaster = new THREE.Raycaster();
 	document.addEventListener( 'mousedown', onDocumentMouseDown, false );
 }
@@ -133,7 +138,8 @@ function onDocumentMouseDown( event ) {
 	// find intersections
 	var vector = new THREE.Vector3( mouse.x, mouse.y, 1 ).unproject( camera );
 	raycaster.set( camera.position, vector.sub( camera.position ).normalize() );
-	var intersects = raycaster.intersectObjects( scene.children );
+	//var intersects = raycaster.intersectObjects( scene.children );
+	var intersects = raycaster.intersectObjects( pickables );
 	if ( intersects.length > 0 ) {
 		if (intersects[0].object.name === "leftB") spin ("left");
 		else if (intersects[0].object.name === "rightB") spin ("right");

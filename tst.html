@@ -1,0 +1,233 @@
+
+<!DOCTYPE>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>computer_graphic_HW5</title>
+<style type="text/css">
+
+      #info {
+        position: absolute;
+        top: 2%;
+        width: 100%;
+        padding: 10px;
+        text-align: center;
+        color: #ffff00
+      }
+      #gui {
+        position: absolute;
+        top: 30px;
+        right: 1%;
+        height: 350px;
+        width: 100px;
+      }
+      body {
+        overflow: hidden;
+      }
+
+</style>
+</head>
+<body> 
+     <div id="info">HW5<br/>GLSL</div>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+     <script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
+     <script id="myVertexShader" type="x-shader/x-vertex">
+  
+         uniform int shading;
+         uniform int coordinate;
+         varying vec3 color;
+         varying vec4 pos_pixel;
+         vec4 pos_vertex;
+  
+        void perVertexShading() {
+            if ( position.x > 0.0 ) 
+                color = vec3 (1, 1, 1);
+            else 
+                color = vec3 (0, 0, 0);      
+        }
+
+        void main() 
+        {
+             gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0 );
+
+             if( coordinate == 0 )  //object
+                 pos_vertex = vec4( position, 1.0 );    
+             else if( coordinate == 1 )//world
+                 pos_vertex = modelMatrix * vec4( position, 1.0 );          
+             else if( coordinate == 2 )//eye
+                 pos_vertex = modelViewMatrix * vec4( position, 1.0 );    
+
+             pos_pixel = pos_vertex; 
+
+             if ( shading == 0 )  perVertexShading();// per-vertex shading         
+        }
+
+     </script>
+     <script id="myFragmentShader" type="x-shader/x-fragment">
+
+        uniform int shading;
+        vec3 color_pixel;
+        varying vec4 pos_pixel;
+        varying vec3 color;
+
+        void perPixelShading() {
+            if ( pos_pixel.x > 0.0 ) 
+                color_pixel= vec3 (1, 1, 1);
+            else 
+                color_pixel = vec3 (0, 0, 0);
+        }
+
+        void main()
+        {
+            if( shading == 1 ) {
+                perPixelShading();// per-pixel shading  
+                gl_FragColor = vec4(color_pixel, 1.0);
+            }
+            else
+                gl_FragColor = vec4 (color, 1.0);    
+        }
+
+     </script>
+     <script language="javascript" type="text/javascript">
+
+         var scene, renderer, camera;
+         var controls;
+         var jsonModel, jsonModel2;
+         var angle = 0;
+
+         init();
+         animate();
+
+         function init() {
+            var width = window.innerWidth;
+            var height = window.innerHeight;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setClearColor(0x888888);
+            document.body.appendChild(renderer.domElement);
+
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000);
+            camera.position.z = 200;
+            camera.position.y = 100;
+            camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+            THREE.ImageUtils.croosOrigin = '';
+            //var texture = THREE.ImageUtils.loadTexture('images/wooden.jpg');
+            var geometry = new THREE.PlaneGeometry( 250, 250, 32 );
+            var material = new THREE.MeshPhongMaterial( {color: 0x888888, side: THREE.DoubleSide} );
+            var plane = new THREE.Mesh( geometry, material );
+            plane.position.y = -0.5;
+            plane.receiveShadow = true;
+            plane.rotation.x = Math.PI / 2;
+            scene.add( plane );
+            //ambintlight
+            //scene.add( new THREE.AmbientLight(0x440000) );
+            //spotlight
+            spotLight = new THREE.SpotLight(0xffffff, 1.5);
+            spotLight.position.set(0, 150, 0);
+            spotLight.angle = Math.PI / 2;
+            //spotLight.target = jsonModel;
+            spotLight.exponent = 4;
+            scene.add(spotLight);
+
+            // shadow map settings
+            spotLight.castShadow = true;
+            spotLight.shadowMapWidth = 1024;
+            spotLight.shadowMapHeight = 1024;
+            spotLight.shadowCameraNear = 10;
+            spotLight.shadowCameraFar = 4000;
+            spotLight.shadowCameraFov = 90;//spotLight.angle / Math.PI * 180;
+/*
+            // directional light
+            dLight = new THREE.DirectionalLight(0xffff00);
+            dLight.position.set(200, 100, 0);
+            dLight.castShadow = true;
+            dLight.shadowCameraLeft = -80;
+            dLight.shadowCameraTop = -80;
+            dLight.shadowCameraRight = 80;
+            dLight.shadowCameraBottom = 80;
+            dLight.shadowCameraNear = 1;
+            dLight.shadowCameraFar = 1000;
+            dLight.shadowBias = -.0001
+            dLight.shadowMapWidth = dLight.shadowMapHeight = 1024;
+            dLight.shadowDarkness = .7;
+            scene.add(dLight);
+*/
+            renderer.shadowMapEnabled = true;
+            renderer.shadowMapType = THREE.PCFShadowMap;
+
+            gcontrols = new function() {
+               this.shading = 'per-vertex';
+               this.coordinate = 'object';
+            }
+
+            var gui = new dat.GUI();
+            gui.domElement.id = 'gui';
+
+            var f1 = gui.addFolder("Coordinate System");
+            f1.add (gcontrols, 'coordinate', ['object', 'world', 'eye']);
+            var f2 = gui.addFolder('Shading Computation');
+            f2.add (gcontrols, 'shading', ['per-vertex', 'per-pixel']);
+
+            /////////////////////////////////////////////////////////////////
+            teapotMaterial = new THREE.ShaderMaterial({
+               uniforms: {
+                  //lightpos: { value: new THREE.Vector3(0, 30, 30) },
+                  shading: { type: 'i', value: 0 },
+                  coordinate: { type: 'i', value: 0 },
+               },
+               vertexShader: document.getElementById('myVertexShader').textContent,
+               fragmentShader: document.getElementById('myFragmentShader').textContent
+            });
+
+            var jsonLoader = new THREE.JSONLoader();
+            var url = "models/teapot.json";
+            jsonLoader.load(url, function(geometry, materials) {
+                jsonModel = new THREE.Mesh(geometry, teapotMaterial);
+                jsonModel.scale.set(10, 10, 10);
+                jsonModel.castShadow = true;
+                jsonModel.receiveShadow = true;
+                scene.add(jsonModel);
+
+                jsonModel2 = jsonModel.clone();
+                jsonModel2.position.set(70, 0, 0);
+                jsonModel2.castShadow = true;
+                jsonModel2.receiveShadow = true;
+                jsonModel.material = new THREE.MeshPhongMaterial();
+                scene.add(jsonModel2);
+            });
+         
+           
+        }
+        function animate() {
+            angle += 0.01;
+            //coordinate
+            if( gcontrols.coordinate == 'object' )
+                teapotMaterial.uniforms.coordinate.value = 0;
+            else if( gcontrols.coordinate == 'world' )
+                teapotMaterial.uniforms.coordinate.value = 1;
+            else if( gcontrols.coordinate == 'eye' )
+                teapotMaterial.uniforms.coordinate.value = 2;
+            //shading
+            if( gcontrols.shading == 'per-pixel' ) 
+                teapotMaterial.uniforms.shading.value = 1;
+            else if( gcontrols.shading == 'per-vertex' ) 
+                teapotMaterial.uniforms.shading.value = 0;
+
+            if (jsonModel2 !== undefined) 
+                jsonModel2.position.set ( 80 * Math.cos(angle), 0, 80 * Math.sin(angle) );
+            
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+     </script>
+</body>
+</html>

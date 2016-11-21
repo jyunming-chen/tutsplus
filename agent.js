@@ -25,8 +25,7 @@ Agent.prototype.step = function (dt)
 	this.accumForce();
 	
 	// vel += force*dt
-	var tmp = this.force.clone();
-	tmp.multiplyScalar (dt);
+	var tmp = this.force.clone().multiplyScalar(dt);
 	this.vel.add (tmp);  
 
 	// velocity modulation by arriving
@@ -38,8 +37,7 @@ Agent.prototype.step = function (dt)
 	}
 	
 	// pos += vel*dt
-	tmp.copy (this.vel);
-	tmp.multiplyScalar (dt);
+	tmp = this.vel.clone().multiplyScalar (dt);
 	this.pos.add (tmp); 
 };
 
@@ -53,8 +51,7 @@ Agent.prototype.accumForce = function ()
 	// seek
 	var tmp = new THREE.Vector3();
 	tmp.subVectors (this.target, this.pos);
-	tmp.normalize();
-	tmp.multiplyScalar (MAXSPEED);
+	tmp.normalize().multiplyScalar (MAXSPEED);
 	sum.subVectors (tmp, this.vel);
 
 	// collision

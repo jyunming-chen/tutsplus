@@ -76,11 +76,12 @@ function init()
 
 	renderer = new THREE.WebGLRenderer({antialias: true});
 	renderer.setSize (width, height);
+	renderer.setClearColor(0x888888);
 	document.body.appendChild (renderer.domElement);
 
 	scene = new THREE.Scene();
 
-	camera = new THREE.PerspectiveCamera (45, width/height, 0.1, 10000000);
+	camera = new THREE.PerspectiveCamera (45, width/height, 0.1, 10000);
 	camera.position.y = 160;
 	camera.position.z = 400;
 	camera.lookAt (new THREE.Vector3(0,0,0));
@@ -96,7 +97,7 @@ function init()
 	controls = new THREE.OrbitControls (camera, render.domElement);
 
 	var skyboxGeometry = new THREE.BoxGeometry (10000,10000,10000);
-	var skyboxMaterial = new THREE.MeshBasicMaterial ({color: 0x222222, side:THREE.BackSide});
+	var skyboxMaterial = new THREE.MeshBasicMaterial ({color: 0xbbbbbb, side:THREE.BackSide});
 	var skybox = new THREE.Mesh (skyboxGeometry, skyboxMaterial);
 	scene.add (skybox);
 
